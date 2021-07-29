@@ -188,7 +188,7 @@ namespace Nuke.Common
                 {
                     var innerException = exception.InnerException.NotNull("innerException != null");
                     Logger.Warn(includeStackTrace
-                        ? new[] { innerException.Message, "StackTrace:", innerException.StackTrace }.JoinNewLine()
+                        ? innerException.ToString()
                         : innerException.Message);
                 }
 

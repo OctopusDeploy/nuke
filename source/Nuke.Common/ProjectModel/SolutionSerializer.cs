@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using JetBrains.Annotations;
+using Microsoft.Build.Construction;
 using Nuke.Common.IO;
 using Nuke.Common.Utilities.Collections;
 
@@ -31,16 +32,16 @@ namespace Nuke.Common.ProjectModel
                            {
                                Path = (AbsolutePath) solutionFile,
                                Header = content.TakeWhile(x => !x.StartsWith("Project")).ToArray(),
-                               Properties = trimmedContent.GetGlobalSection("SolutionProperties"),
-                               ExtensibilityGlobals = trimmedContent.GetGlobalSection("ExtensibilityGlobals"),
-                               Configurations = trimmedContent.GetGlobalSection("SolutionConfigurationPlatforms")
+                               Properties = trimmedContent.GetGlobalSection("SolutionProperties", solutionFile),
+                               ExtensibilityGlobals = trimmedContent.GetGlobalSection("ExtensibilityGlobals", solutionFile),
+                               Configurations = trimmedContent.GetGlobalSection("SolutionConfigurationPlatforms", solutionFile)
                            };
 
-            var primitiveProjects = GetPrimitiveProjects(solution, trimmedContent).ToList();
+            var primitiveProjects = GetPrimitiveProjects(solution, trimmedContent, solutionFile).ToList();
             foreach (var primitiveProject in primitiveProjects)
                 solution.AddPrimitiveProject(primitiveProject);
 
-            var projectToSolutionFolder = GetProjectToSolutionFolder(trimmedContent);
+            var projectToSolutionFolder = GetProjectToSolutionFolder(trimmedContent, solutionFile);
             if (projectToSolutionFolder != null)
             {
                 var solutionFolders = primitiveProjects.OfType<SolutionFolder>().ToList();
@@ -59,15 +60,30 @@ namespace Nuke.Common.ProjectModel
         }
 
         [CanBeNull]
-        private static Dictionary<Guid, Guid> GetProjectToSolutionFolder(this string[] lines)
+        private static Dictionary<Guid, Guid> GetProjectToSolutionFolder(this string[] lines, string solutionFile)
         {
             return lines
-                .GetGlobalSection("NestedProjects")
-                ?.ToDictionary(x => Guid.Parse(x.Key.Trim('{', '}')), x => Guid.Parse(x.Value.Trim('{', '}')));
+                .GetGlobalSection("NestedProjects", solutionFile)
+                ?.ToSafeDictionary(x => Guid.Parse(x.Key.Trim('{', '}')), x => Guid.Parse(x.Value.Trim('{', '}')), solutionFile);
         }
 
         [CanBeNull]
-        private static IDictionary<string, string> GetGlobalSection(this string[] lines, string name)
+        private static Dictionary<TKey, TElement> ToSafeDictionary<TSource, TKey, TElement>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector, Func<TSource, TElement> elementSelector, string solutionFile)
+        {
+            var results = new Dictionary<TKey, TElement>();
+            foreach (TSource element in source)
+            {
+                var key = keySelector(element);
+                if (results.ContainsKey(key))
+                    throw new FailedToParseSolutionFileException(solutionFile, key.ToString());
+                results.Add(key, elementSelector(element));
+            }
+
+            return results;
+        }
+
+        [CanBeNull]
+        private static IDictionary<string, string> GetGlobalSection(this string[] lines, string name, string solutionFile)
         {
             var sectionLines = lines
                 .SkipWhile(x => !Regex.IsMatch(x, $@"^\s*GlobalSection\({name}\) = \w+$"))
@@ -79,10 +95,10 @@ namespace Nuke.Common.ProjectModel
                 ? null
                 : sectionLines
                     .Select(x => x.Split('='))
-                    .ToDictionary(x => x[0].Trim(), x => x[1].Trim());
+                    .ToSafeDictionary(x => x[0].Trim(), x => x[1].Trim(), solutionFile);
         }
 
-        private static IEnumerable<PrimitiveProject> GetPrimitiveProjects(Solution solution, string[] content)
+        private static IEnumerable<PrimitiveProject> GetPrimitiveProjects(Solution solution, string[] content, string solutionFile)
         {
             static string GuidPattern(string text)
                 => $@"\{{(?<{Regex.Escape(text)}>[0-9a-fA-F]{{8}}-[0-9a-fA-F]{{4}}-[0-9a-fA-F]{{4}}-[0-9a-fA-F]{{4}}-[0-9a-fA-F]{{12}})\}}";
@@ -93,8 +109,8 @@ namespace Nuke.Common.ProjectModel
             var projectRegex = new Regex(
                 $@"^Project\(""{GuidPattern("typeId")}""\)\s*=\s*{TextPattern("name")},\s*{TextPattern("path")},\s*""{GuidPattern("projectId")}""$");
 
-            var configurations = (content.GetGlobalSection("ProjectConfigurationPlatforms") ??
-                                  content.GetGlobalSection("ProjectConfiguration") ??
+            var configurations = (content.GetGlobalSection("ProjectConfigurationPlatforms", solutionFile) ??
+                                  content.GetGlobalSection("ProjectConfiguration", solutionFile) ??
                                   new Dictionary<string, string>())
                 .Select(x => new
                              {
@@ -103,11 +119,13 @@ namespace Nuke.Common.ProjectModel
                                  SolutionConfiguration = x.Value
                              })
                 .GroupBy(x => x.ProjectId)
-                .ToDictionary(
+                .ToSafeDictionary(
                     x => x.Key,
-                    x => x.ToDictionary(
+                    x => x.ToSafeDictionary(
                         y => y.ProjectConfiguration,
-                        y => y.SolutionConfiguration));
+                        y => y.SolutionConfiguration,
+                        solutionFile),
+                    solutionFile);
 
             for (var i = 0; i < content.Length; i++)
             {
@@ -138,7 +156,7 @@ namespace Nuke.Common.ProjectModel
                         .TakeWhile(x => !x.StartsWith("EndProjectSection") && !x.StartsWith("EndProject"))
                         .Skip(2)
                         .Select(x => x.Split('='))
-                        .ToDictionary(x => x[0].Trim(), x => x[1].Trim());
+                        .ToSafeDictionary(x => x[0].Trim(), x => x[1].Trim(), solutionFile);
 
                     yield return new SolutionFolder(
                         solution: solution,
