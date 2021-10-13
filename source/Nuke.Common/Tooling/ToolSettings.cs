@@ -30,6 +30,7 @@ namespace Nuke.Common.Tooling
         internal Dictionary<string, string> ProcessEnvironmentVariablesInternal { get; set; }
         public int? ProcessExecutionTimeout { get; internal set; }
         public bool? ProcessLogOutput { get; internal set; }
+        public bool? ProcessLogRawOutput { get; internal set; }
         public bool? ProcessLogInvocation { get; internal set; }
         public bool? ProcessLogTimestamp { get; internal set; }
         public string ProcessLogFile { get; internal set; }

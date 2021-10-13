@@ -32,6 +32,7 @@ namespace Nuke.Common.Tooling
             IReadOnlyDictionary<string, string> environmentVariables = null,
             int? timeout = null,
             bool? logOutput = null,
+            bool? logRawOutput = null,
             bool? logInvocation = null,
             bool? logTimestamp = null,
             string logFile = null,
@@ -46,6 +47,7 @@ namespace Nuke.Common.Tooling
                 environmentVariables,
                 timeout,
                 logOutput,
+                logRawOutput,
                 logInvocation,
                 logTimestamp,
                 logFile,
@@ -64,6 +66,7 @@ namespace Nuke.Common.Tooling
                 toolSettings.ProcessEnvironmentVariables,
                 toolSettings.ProcessExecutionTimeout,
                 toolSettings.ProcessLogOutput,
+                toolSettings.ProcessLogRawOutput,
                 toolSettings.ProcessLogInvocation,
                 toolSettings.ProcessLogTimestamp,
                 toolSettings.ProcessLogFile,
@@ -78,6 +81,7 @@ namespace Nuke.Common.Tooling
             IReadOnlyDictionary<string, string> environmentVariables = null,
             int? timeout = null,
             bool? logOutput = null,
+            bool? logRawOutput = null,
             bool? logInvocation = null,
             bool? logTimestamp = null,
             string logFile = null,
@@ -113,7 +117,7 @@ namespace Nuke.Common.Tooling
                 logTimestamp ?? DefaultLogTimestamp,
                 logFile,
                 logOutput ?? DefaultLogOutput
-                    ? customLogger ?? DefaultLogger
+                    ? customLogger ?? (logRawOutput ?? false ? RawLogger : DefaultLogger)
                     : null,
                 outputFilter);
         }
@@ -239,6 +243,14 @@ namespace Nuke.Common.Tooling
                 Log.Debug(output);
             else
                 Log.Error(output);
+        }
+
+        public static void RawLogger(OutputType type, string output)
+        {
+            if (type == OutputType.Std)
+                Host.Debug(output);
+            else
+                Host.Error(output);
         }
 
         private static void PrintEnvironmentVariables(ProcessStartInfo startInfo)

@@ -95,6 +95,36 @@ namespace Nuke.Common.Tooling
             return newToolSettings;
         }
 
+        ///<summary>Sets <see cref="ToolSettings.ProcessLogRawOutput"/> -- <inheritdoc cref="ToolSettings.ProcessLogRawOutput" /></summary>
+        [Pure]
+        public static T SetProcessLogRawOutput<T>(this T toolSettings, bool enableRawOutput)
+            where T : ToolSettings
+        {
+            var newToolSettings = toolSettings.NewInstance();
+            newToolSettings.ProcessLogRawOutput = enableRawOutput;
+            return newToolSettings;
+        }
+
+        ///<summary>Enables <see cref="ToolSettings.ProcessLogRawOutput"/> -- <inheritdoc cref="ToolSettings.ProcessLogRawOutput" /></summary>
+        [Pure]
+        public static T EnableProcessLogRawOutput<T>(this T toolSettings)
+            where T : ToolSettings
+        {
+            var newToolSettings = toolSettings.NewInstance();
+            newToolSettings.ProcessLogRawOutput = true;
+            return newToolSettings;
+        }
+
+        ///<summary>Disables <see cref="ToolSettings.ProcessLogRawOutput"/> -- <inheritdoc cref="ToolSettings.ProcessLogRawOutput" /></summary>
+        [Pure]
+        public static T DisableProcessLogRawOutput<T>(this T toolSettings)
+            where T : ToolSettings
+        {
+            var newToolSettings = toolSettings.NewInstance();
+            newToolSettings.ProcessLogRawOutput = false;
+            return newToolSettings;
+        }
+
         ///<summary>Sets <see cref="ToolSettings.ProcessLogInvocation"/> -- <inheritdoc cref="ToolSettings.ProcessLogInvocation" /></summary>
         [Pure]
         public static T SetProcessLogInvocation<T>(this T toolSettings, bool enableInvocation)

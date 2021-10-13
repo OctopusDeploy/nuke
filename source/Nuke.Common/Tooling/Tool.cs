@@ -14,6 +14,7 @@ namespace Nuke.Common.Tooling
         IReadOnlyDictionary<string, string> environmentVariables = null,
         int? timeout = null,
         bool? logOutput = null,
+        bool? logRawOutput = null,
         bool? logInvocation = null,
         bool? logTimestamp = null,
         string logFile = null,
