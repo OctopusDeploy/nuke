@@ -39,7 +39,7 @@ namespace Nuke.Common.Execution
 
             try
             {
-                Logging.Configure(build);
+                Logging.Configure(x => x.ConfigureBuild(build));
 
                 build.ExecutableTargets = ExecutableTargetFactory.CreateAll(build, defaultTargetExpressions);
                 build.ExecuteExtension<IOnBuildCreated>(x => x.OnBuildCreated(build, build.ExecutableTargets));

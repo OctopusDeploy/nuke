@@ -18,11 +18,11 @@ using Serilog.Sinks.SystemConsole.Themes;
 
 namespace Nuke.Common.Execution
 {
-    public static class Logging
+    public static partial class Logging
     {
-        public static readonly LoggingLevelSwitch LevelSwitch = new LoggingLevelSwitch();
+        private static readonly LoggingLevelSwitch LevelSwitch = new LoggingLevelSwitch();
 
-        public static LogLevel Level
+        internal static LogLevel Level
         {
             get => LevelSwitch.MinimumLevel switch
             {
@@ -42,19 +42,60 @@ namespace Nuke.Common.Execution
             };
         }
 
-        public static void Configure(NukeBuild build = null)
+        public static void Configure(Func<LoggerConfiguration, LoggerConfiguration> configurationFactory)
         {
-            if (build != null)
-                DeleteOldLogFiles();
+            Log.Logger = configurationFactory.Invoke(new LoggerConfiguration()).CreateLogger();
+        }
 
-            Log.Logger = new LoggerConfiguration()
-                .Enrich.With<TargetLogEventEnricher>()
-                .ConfigureHost(build)
+        public static LoggerConfiguration ConfigureBuild(this LoggerConfiguration configuration, NukeBuild build)
+        {
+            return configuration
+                .ConfigureHost()
                 .ConfigureConsole(build)
-                .ConfigureInMemory(build)
+                .ConfigureInMemory()
                 .ConfigureFiles(build)
-                .ConfigureLevel()
-                .CreateLogger();
+                .MinimumLevel.Is(LogEventLevel.Debug);
+        }
+
+        internal static LoggerConfiguration ConfigureConsole(this LoggerConfiguration configuration, NukeBuild build = null)
+        {
+            return configuration
+                .WriteTo.Console(
+                    outputTemplate: build != null ? NukeBuild.Host.OutputTemplate : Host.DefaultOutputTemplate,
+                    theme: (ConsoleTheme)(build != null ? NukeBuild.Host.Theme : Host.DefaultTheme),
+                    applyThemeToRedirectedOutput: true,
+                    levelSwitch: LevelSwitch);
+        }
+
+        private static LoggerConfiguration ConfigureHost(this LoggerConfiguration configuration)
+        {
+            return configuration
+                .WriteTo.Sink<Host.LogEventSink>(restrictedToMinimumLevel: LogEventLevel.Warning);
+        }
+
+        private static LoggerConfiguration ConfigureInMemory(this LoggerConfiguration configuration, LogEventLevel minimumLevel = LogEventLevel.Warning)
+        {
+            return configuration
+                .WriteTo.Sink(InMemorySink.Instance, minimumLevel);
+        }
+
+        private static LoggerConfiguration ConfigureFiles(this LoggerConfiguration configuration, NukeBuild build)
+        {
+            if (NukeBuild.Host is IBuildServer)
+                return configuration;
+
+            DeleteOldLogFiles();
+
+            var buildLogFile = NukeBuild.TemporaryDirectory / "build.log";
+            var targetPadding = build.TargetNames.Max(x => x.Length);
+            return configuration
+                .Enrich.With<TargetLogEventEnricher>()
+                .WriteTo.File(
+                    path: buildLogFile,
+                    outputTemplate: $"{{Timestamp:HH:mm:ss.fff}} | {{Level:u1}} | {{Target,{targetPadding}}} | {{Message:l}}{{NewLine}}{{Exception}}")
+                .WriteTo.File(
+                    path: Path.ChangeExtension(buildLogFile, $".{DateTime.Now:s}.log"),
+                    outputTemplate: $"{{Level:u1}} | {{Target,{targetPadding}}} | {{Message:l}}{{NewLine}}{{Exception}}");
         }
 
         private static void DeleteOldLogFiles()
@@ -74,106 +115,7 @@ namespace Nuke.Common.Execution
             }
         }
 
-        private static LoggerConfiguration ConfigureLevel(this LoggerConfiguration configuration)
-        {
-            return configuration.MinimumLevel.Verbose();
-        }
-
-        private static LoggerConfiguration ConfigureConsole(this LoggerConfiguration configuration, [CanBeNull] NukeBuild build)
-        {
-            return configuration
-                .WriteTo.Console(
-                    outputTemplate: build != null ? NukeBuild.Host.OutputTemplate : Host.DefaultOutputTemplate,
-                    theme: (ConsoleTheme)(build != null ? NukeBuild.Host.Theme : Host.DefaultTheme),
-                    applyThemeToRedirectedOutput: true,
-                    levelSwitch: LevelSwitch);
-        }
-
-        private static LoggerConfiguration ConfigureHost(this LoggerConfiguration configuration, [CanBeNull] NukeBuild build)
-        {
-            if (build == null)
-                return configuration;
-
-            return configuration
-                .WriteTo.Sink<Host.LogEventSink>(restrictedToMinimumLevel: LogEventLevel.Warning);
-        }
-
-        private static LoggerConfiguration ConfigureInMemory(this LoggerConfiguration configuration, [CanBeNull] NukeBuild build)
-        {
-            if (build == null)
-                return configuration;
-
-            return configuration
-                .WriteTo.Sink(InMemorySink.Instance, LogEventLevel.Warning);
-        }
-
-        private static LoggerConfiguration ConfigureFiles(this LoggerConfiguration configuration, [CanBeNull] NukeBuild build)
-        {
-            if (build == null || NukeBuild.Host is IBuildServer)
-                return configuration;
-
-            var buildLogFile = NukeBuild.TemporaryDirectory / "build.log";
-            var targetPadding = build.TargetNames.Max(x => x.Length);
-            return configuration
-                .WriteTo.File(
-                    path: buildLogFile,
-                    outputTemplate: $"{{Timestamp:HH:mm:ss.fff}} | {{Level:u1}} | {{Target,{targetPadding}}} | {{Message:l}}{{NewLine}}{{Exception}}")
-                .WriteTo.File(
-                    path: Path.ChangeExtension(buildLogFile, $".{DateTime.Now:s}.log"),
-                    outputTemplate: $"{{Level:u1}} | {{Target,{targetPadding}}} | {{Message:l}}{{NewLine}}{{Exception}}");
-        }
-
-        internal static void Test()
-        {
-            const string Esc = "\u001b[";
-            const string Reset = "\u001b[0m";
-
-            for (var i = 30; i < 47; i++)
-                Console.Write($"{Esc}{i}m{i}  {Reset} ");
-            Console.WriteLine();
-            for (var i = 30; i < 47; i++)
-                Console.Write($"{Esc}{i};1m{i};1{Reset} ");
-            Console.WriteLine();
-            for (var i = 30; i < 47; i++)
-                Console.Write($"{Esc}{i};2m{i};2{Reset} ");
-            Console.WriteLine();
-            for (var i = 30; i < 47; i++)
-                Console.Write($"{Esc}{i};3m{i};2{Reset} ");
-            Console.WriteLine();
-
-            for (var i = 90; i < 107; i++)
-                Console.Write($"{Esc}{i}m{i}  {Reset} ");
-            Console.WriteLine();
-            for (var i = 90; i < 107; i++)
-                Console.Write($"{Esc}{i};1m{i};1{Reset} ");
-            Console.WriteLine();
-            for (var i = 90; i < 107; i++)
-                Console.Write($"{Esc}{i};2m{i};2{Reset} ");
-            Console.WriteLine();
-            for (var i = 90; i < 107; i++)
-                Console.Write($"{Esc}{i};3m{i};2{Reset} ");
-            Console.WriteLine();
-
-            for (var i = 0; i < 255; i++)
-            {
-                var code = i.ToString().PadLeft(3, '0');
-                Console.Write($"{Esc}38;5;{code}m{code}{Reset} ");
-                if ((i + 1) % 16 == 0)
-                    Console.WriteLine();
-            }
-
-            Console.WriteLine();
-
-            for (var i = 0; i <= 255; i++)
-            {
-                var code = i.ToString().PadLeft(3, '0');
-                Console.Write($"{Esc}38;5;{code};1m{code}{Reset} ");
-                if ((i + 1) % 16 == 0)
-                    Console.WriteLine();
-            }
-        }
-
-        public static IDisposable SetTarget(string name)
+        internal static IDisposable SetTarget(string name)
         {
             return DelegateDisposable.CreateBracket(
                 () => TargetLogEventEnricher.Property = new LogEventProperty("Target", new ScalarValue(name)),
@@ -209,7 +151,7 @@ namespace Nuke.Common.Execution
         {
             private static LogEventProperty s_defaultProperty = new LogEventProperty("Target", new ScalarValue(""));
 
-            public  static LogEventProperty Property;
+            public static LogEventProperty Property;
 
             public static LogEventProperty Current => Property ?? s_defaultProperty;
 
