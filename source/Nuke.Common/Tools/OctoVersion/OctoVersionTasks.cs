@@ -52,5 +52,15 @@ namespace Nuke.Common.Tools.OctoVersion
                 throw new Exception($"Cannot parse {nameof(OctoVersion)} output from {toolSettings.OutputJsonFile.SingleQuote()}.", exception);
             }
         }
+
+        private static void PreProcess(ref OctoVersionGetVersionSettings toolSettings)
+        {
+            toolSettings.ProcessLogRawOutput ??= true;
+        }
+
+        private static void PreProcess(ref OctoVersionExecuteSettings toolSettings)
+        {
+            toolSettings.ProcessLogRawOutput ??= true;
+        }
     }
 }

@@ -65,6 +65,7 @@ namespace Nuke.Common.Tools.OctoVersion
         public static (OctoVersionInfo Result, IReadOnlyCollection<Output> Output) OctoVersionGetVersion(OctoVersionGetVersionSettings toolSettings = null)
         {
             toolSettings = toolSettings ?? new OctoVersionGetVersionSettings();
+            PreProcess(ref toolSettings);
             using var process = ProcessTasks.StartProcess(toolSettings);
             process.AssertZeroExitCode();
             return (GetResult(process, toolSettings), process.Output);
@@ -143,6 +144,7 @@ namespace Nuke.Common.Tools.OctoVersion
         public static IReadOnlyCollection<Output> OctoVersionExecute(OctoVersionExecuteSettings toolSettings = null)
         {
             toolSettings = toolSettings ?? new OctoVersionExecuteSettings();
+            PreProcess(ref toolSettings);
             using var process = ProcessTasks.StartProcess(toolSettings);
             process.AssertZeroExitCode();
             return process.Output;

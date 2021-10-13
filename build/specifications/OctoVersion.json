@@ -16,6 +16,7 @@
       "commonPropertySets": [
         "octoVersionSettings"
       ],
+      "preProcess": true,
       "definiteArgument": "octoversion",
       "settingsClass": {}
     },
@@ -25,6 +26,7 @@
       "commonPropertySets": [
         "octoVersionSettings"
       ],
+      "preProcess": true,
       "definiteArgument": "octoversion",
       "settingsClass": {}
     }
