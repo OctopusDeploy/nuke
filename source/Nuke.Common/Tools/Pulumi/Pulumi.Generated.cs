@@ -3,7 +3,6 @@
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Nuke.Common;
-using Nuke.Common.Execution;
 using Nuke.Common.Tooling;
 using Nuke.Common.Tools;
 using Nuke.Common.Utilities.Collections;
@@ -37,9 +36,9 @@ namespace Nuke.Common.Tools.Pulumi
         ///   <p>Pulumi is an <a href="https://github.com/pulumi/pulumi">open source</a> infrastructure as code tool for creating, deploying and managing cloud infrastructure. Pulumi works with traditional infrastructure like VMs, networks, and databases, in addition to modern architectures, including containers, Kubernetes clusters, and serverless functions. Pulumi supports dozens of public, private, and hybrid cloud service providers.</p>
         ///   <p>For more details, visit the <a href="https://www.pulumi.com/">official website</a>.</p>
         /// </summary>
-        public static IReadOnlyCollection<Output> Pulumi(string arguments, string workingDirectory = null, IReadOnlyDictionary<string, string> environmentVariables = null, int? timeout = null, bool? logOutput = null, bool? logInvocation = null, Func<string, string> outputFilter = null)
+        public static IReadOnlyCollection<Output> Pulumi(ref ArgumentStringHandler arguments, string workingDirectory = null, IReadOnlyDictionary<string, string> environmentVariables = null, int? timeout = null, bool? logOutput = null, bool? logInvocation = null, Action<OutputType, string> customLogger = null)
         {
-            using var process = ProcessTasks.StartProcess(PulumiPath, arguments, workingDirectory, environmentVariables, timeout, logOutput, logInvocation, PulumiLogger, outputFilter);
+            using var process = ProcessTasks.StartProcess(PulumiPath, ref arguments, workingDirectory, environmentVariables, timeout, logOutput, logInvocation, customLogger ?? PulumiLogger);
             process.AssertZeroExitCode();
             return process.Output;
         }
@@ -2334,7 +2333,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   Config to use during the update.
         /// </summary>
@@ -2537,7 +2536,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   Config to use during the update.
         /// </summary>
@@ -2730,7 +2729,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   Use the configuration values in the specified file rather than detecting the file name.
         /// </summary>
@@ -2822,7 +2821,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   The name of the new stack to copy the config to.
         /// </summary>
@@ -2904,7 +2903,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   The key to the key-value pair in the configuration.
         /// </summary>
@@ -2991,7 +2990,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   Overwrite configuration file, if it exists, without creating a backup.
         /// </summary>
@@ -3068,7 +3067,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   The key to the key-value pair in the configuration.
         /// </summary>
@@ -3150,7 +3149,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   The key to the key-value pair in the configuration.
         /// </summary>
@@ -3247,7 +3246,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   Display each resource's provider-assigned unique ID.
         /// </summary>
@@ -3344,7 +3343,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   The name of the new secrets provider.
         /// </summary>
@@ -3421,7 +3420,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   A filename to write stack output to.
         /// </summary>
@@ -3508,7 +3507,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   A file that will have a Graphviz DOT graph written to it.
         /// </summary>
@@ -3605,7 +3604,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   Serialize the preview diffs, operations, and overall output as JSON.
         /// </summary>
@@ -3687,7 +3686,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   A filename to read stack input from.
         /// </summary>
@@ -3769,7 +3768,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   The stack name, optionally preceded by the organization name and a slash: <c>[&lt;org-name&gt;/]&lt;stack-name&gt;</c>
         /// </summary>
@@ -3856,7 +3855,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   List all stacks instead of just stacks for the current project.
         /// </summary>
@@ -3953,7 +3952,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   The name of the property whose output value should be listed. This is optional.
         /// </summary>
@@ -4040,7 +4039,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   The new name for the stack.
         /// </summary>
@@ -4117,7 +4116,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   The name for the stack to be removed.
         /// </summary>
@@ -4209,7 +4208,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   The name of the stack that should be selected.
         /// </summary>
@@ -4296,7 +4295,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   The name of the tag to be set.
         /// </summary>
@@ -4378,7 +4377,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   The name of the tag to be set.
         /// </summary>
@@ -4455,7 +4454,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   The name of the tag to be set.
         /// </summary>
@@ -4532,7 +4531,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   Emit output as JSON.
         /// </summary>
@@ -4609,7 +4608,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   The template or URL to base the new stack off of.
         /// </summary>
@@ -4742,7 +4741,7 @@ namespace Nuke.Common.Tools.Pulumi
         ///   Path to the Pulumi executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? PulumiTasks.PulumiPath;
-        public override Action<OutputType, string> ProcessCustomLogger => PulumiTasks.PulumiLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PulumiTasks.PulumiLogger;
         /// <summary>
         ///   Use the configuration values in the specified file rather than detecting the file name.
         /// </summary>

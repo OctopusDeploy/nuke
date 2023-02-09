@@ -3,7 +3,6 @@
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Nuke.Common;
-using Nuke.Common.Execution;
 using Nuke.Common.Tooling;
 using Nuke.Common.Tools;
 using Nuke.Common.Utilities.Collections;
@@ -31,15 +30,15 @@ namespace Nuke.Common.Tools.MauiCheck
         /// </summary>
         public static string MauiCheckPath =>
             ToolPathResolver.TryGetEnvironmentExecutable("MAUICHECK_EXE") ??
-            ToolPathResolver.GetPackageExecutable("Redth.Net.Maui.Check", "MauiCheck.dll");
+            NuGetToolPathResolver.GetPackageExecutable("Redth.Net.Maui.Check", "MauiCheck.dll");
         public static Action<OutputType, string> MauiCheckLogger { get; set; } = ProcessTasks.DefaultLogger;
         /// <summary>
         ///   <p>A dotnet tool for helping set up your .NET MAUI environment.</p>
         ///   <p>For more details, visit the <a href="https://github.com/Redth/dotnet-maui-check">official website</a>.</p>
         /// </summary>
-        public static IReadOnlyCollection<Output> MauiCheck(string arguments, string workingDirectory = null, IReadOnlyDictionary<string, string> environmentVariables = null, int? timeout = null, bool? logOutput = null, bool? logInvocation = null, Func<string, string> outputFilter = null)
+        public static IReadOnlyCollection<Output> MauiCheck(ref ArgumentStringHandler arguments, string workingDirectory = null, IReadOnlyDictionary<string, string> environmentVariables = null, int? timeout = null, bool? logOutput = null, bool? logInvocation = null, Action<OutputType, string> customLogger = null)
         {
-            using var process = ProcessTasks.StartProcess(MauiCheckPath, arguments, workingDirectory, environmentVariables, timeout, logOutput, logInvocation, MauiCheckLogger, outputFilter);
+            using var process = ProcessTasks.StartProcess(MauiCheckPath, ref arguments, workingDirectory, environmentVariables, timeout, logOutput, logInvocation, customLogger ?? MauiCheckLogger);
             process.AssertZeroExitCode();
             return process.Output;
         }
@@ -171,7 +170,7 @@ namespace Nuke.Common.Tools.MauiCheck
         ///   Path to the MauiCheck executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? MauiCheckTasks.MauiCheckPath;
-        public override Action<OutputType, string> ProcessCustomLogger => MauiCheckTasks.MauiCheckLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? MauiCheckTasks.MauiCheckLogger;
         /// <summary>
         ///   Manifest files are currently used by the doctor to fetch the latest versions and requirements. The manifest is hosted by default at: <a href="https://aka.ms/dotnet-maui-check-manifest">https://aka.ms/dotnet-maui-check-manifest</a>. Use this option to specify an alternative file path or URL to use.
         /// </summary>
@@ -223,7 +222,7 @@ namespace Nuke.Common.Tools.MauiCheck
         ///   Path to the MauiCheck executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? MauiCheckTasks.MauiCheckPath;
-        public override Action<OutputType, string> ProcessCustomLogger => MauiCheckTasks.MauiCheckLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? MauiCheckTasks.MauiCheckLogger;
         /// <summary>
         ///   Use the SDK version in the manifest in <em>global.json</em>.
         /// </summary>

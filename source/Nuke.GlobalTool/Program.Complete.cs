@@ -33,17 +33,17 @@ namespace Nuke.GlobalTool
 
             var buildSchemaFile = GetBuildSchemaFile(rootDirectory);
             var completionFile = GetCompletionFile(rootDirectory);
-            if (!File.Exists(buildSchemaFile) && !File.Exists(completionFile))
+            if (!buildSchemaFile.Exists() && !completionFile.Exists())
             {
                 Build(buildScript.NotNull(), $"--{CompletionParameterName}");
                 return 1;
             }
 
-            var position = EnvironmentInfo.GetParameter<int?>("position");
+            var position = EnvironmentInfo.GetNamedArgument<int?>("position");
             var completionItems = IsLegacy(rootDirectory)
-                ? SerializationTasks.YamlDeserializeFromFile<Dictionary<string, string[]>>(completionFile)
-                : SchemaUtility.GetCompletionItems(buildSchemaFile, GetProfileNames(rootDirectory));
-            foreach (var item in CompletionUtility.GetRelevantCompletionItems(words, completionItems))
+                ? completionFile.ReadYaml<Dictionary<string, string[]>>()
+                : CompletionUtility.GetItemsFromSchema(buildSchemaFile, GetProfileNames(rootDirectory));
+            foreach (var item in CompletionUtility.GetRelevantItems(words, completionItems))
                 Console.WriteLine(item);
 
             return 0;

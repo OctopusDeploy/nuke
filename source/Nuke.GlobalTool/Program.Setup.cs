@@ -15,12 +15,12 @@ using Nuke.Common.IO;
 using Nuke.Common.Tooling;
 using Nuke.Common.Utilities;
 using Nuke.Common.Utilities.Collections;
+using Spectre.Console;
 using static Nuke.Common.Constants;
 using static Nuke.Common.EnvironmentInfo;
 using static Nuke.Common.IO.PathConstruction;
 using static Nuke.Common.IO.TextTasks;
 using static Nuke.Common.Tooling.ProcessTasks;
-using static Nuke.Common.Utilities.ConsoleUtility;
 using static Nuke.Common.Utilities.TemplateUtility;
 
 namespace Nuke.GlobalTool
@@ -29,62 +29,47 @@ namespace Nuke.GlobalTool
     {
         // ReSharper disable InconsistentNaming
 
-        private const string PLATFORM_NETCORE = "netcore";
-        private const string PLATFORM_NETFX = "netfx";
-        private const string FRAMEWORK_NETFX = "net472";
-        private const string FRAMEWORK_NETCORE = "net6.0";
-
-        private const string FORMAT_SDK = "sdk";
-        private const string FORMAT_LEGACY = "legacy";
+        private const string TARGET_FRAMEWORK = "net6.0";
+        private const string PROJECT_KIND = "9A19103F-16F7-4668-BE54-9A1E7A4F7556";
 
         // ReSharper disable once CognitiveComplexity
         [UsedImplicitly]
         public static int Setup(string[] args, [CanBeNull] AbsolutePath rootDirectory, [CanBeNull] AbsolutePath buildScript)
         {
             PrintInfo();
+            Logging.Configure();
             Telemetry.SetupBuild();
+
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine("[bold]Let's setup a new build![/]");
+            AnsiConsole.WriteLine();
 
             #region Basic
 
-            var nukeLatestReleaseVersion = NuGetPackageResolver.GetLatestPackageVersion(NukeCommonPackageId, includePrereleases: false);
-            var nukeLatestPrereleaseVersion = NuGetPackageResolver.GetLatestPackageVersion(NukeCommonPackageId, includePrereleases: true);
+            var nukeLatestReleaseVersion = NuGetVersionResolver.GetLatestVersion(NukeCommonPackageId, includePrereleases: false);
+            var nukeLatestPrereleaseVersion = NuGetVersionResolver.GetLatestVersion(NukeCommonPackageId, includePrereleases: true);
             var nukeLatestLocalVersion = NuGetPackageResolver.GetGlobalInstalledPackage(NukeCommonPackageId, version: null, packagesConfigFile: null)
                 ?.Version.ToString();
 
             if (rootDirectory == null)
-            {
-                var rootDirectoryItems = new[] { ".git", ".svn" };
-                rootDirectory = (AbsolutePath) FileSystemTasks.FindParentDirectory(
-                    WorkingDirectory,
-                    x => rootDirectoryItems.Any(y => x.GetFileSystemInfos(y, SearchOption.TopDirectoryOnly).Any()));
-            }
+                rootDirectory = WorkingDirectory.FindParentOrSelf(x => x.ContainsDirectory(".git") || x.ContainsDirectory(".svn"));
 
             if (rootDirectory == null)
             {
                 Host.Warning("Could not find root directory. Falling back to working directory ...");
                 rootDirectory = WorkingDirectory;
             }
+            ShowInput("deciduous_tree", "Root directory", rootDirectory);
 
-            var buildProjectName = PromptForInput("How should the build project be named?", "_build");
-            var buildDirectoryName = PromptForInput("Where should the build project be located?", "./build");
+            var buildProjectName = PromptForInput("How should the project be named?", "_build");
+            ClearPreviousLine();
+            ShowInput("bookmark", "Build project name", buildProjectName);
 
-            var targetPlatform = !GetParameter<bool>("boot")
-                ? PLATFORM_NETCORE
-                : PromptForChoice("What bootstrapping method should be used?",
-                    (PLATFORM_NETCORE, ".NET Core SDK"),
-                    (PLATFORM_NETFX, ".NET Framework/Mono"));
+            var buildProjectRelativeDirectory = PromptForInput("Where should the project be located?", "./build");
+            ClearPreviousLine();
+            ShowInput("round_pushpin", "Build project location", buildProjectRelativeDirectory);
 
-            var targetFramework = targetPlatform == PLATFORM_NETFX
-                ? FRAMEWORK_NETFX
-                : FRAMEWORK_NETCORE;
-
-            var projectFormat = targetPlatform == PLATFORM_NETCORE
-                ? FORMAT_SDK
-                : PromptForChoice("What project format should be used?",
-                    (FORMAT_SDK, "SDK-based Format: requires .NET Core SDK"),
-                    (FORMAT_LEGACY, "Legacy Format: supported by all MSBuild/Mono versions"));
-
-            var nukeVersion = PromptForChoice("Which NUKE version should be used?",
+            var nukeVersion = PromptForChoice("Which Nuke.Common version should be used?",
                 new[]
                     {
                         ("latest release", nukeLatestReleaseVersion.GetAwaiter().GetResult()),
@@ -95,102 +80,67 @@ namespace Nuke.GlobalTool
                     .Where(x => x.Item2 != null)
                     .Distinct(x => x.Item2)
                     .Select(x => (x.Item2, $"{x.Item2} ({x.Item1})")).ToArray());
+            ShowInput("gem_stone", "Nuke.Common version", nukeVersion);
 
             var solutionFile = (AbsolutePath) PromptForChoice(
                 "Which solution should be the default?",
-                options: new DirectoryInfo(rootDirectory)
+                choices: new DirectoryInfo(rootDirectory)
                     .EnumerateFiles("*", SearchOption.AllDirectories)
                     .Where(x => x.FullName.EndsWithOrdinalIgnoreCase(".sln"))
                     .OrderByDescending(x => x.FullName)
-                    .Select(x => (x, GetRelativePath(rootDirectory, x.FullName)))
+                    .Select(x => (x, rootDirectory.GetRelativePathTo(x.FullName).ToString()))
                     .Concat((null, "None")).ToArray())?.FullName;
-            var solutionDirectory = solutionFile?.Parent;
+            ShowInput("toolbox", "Default solution", solutionFile != null ? rootDirectory.GetRelativePathTo(solutionFile) : "<none>");
 
             #endregion
 
             #region Generation
 
-            var buildDirectory = rootDirectory / buildDirectoryName;
-            var buildProjectFile = rootDirectory / buildDirectoryName / buildProjectName + ".csproj";
+            var buildDirectory = rootDirectory / buildProjectRelativeDirectory;
+            var buildProjectFile = rootDirectory / buildProjectRelativeDirectory / buildProjectName + ".csproj";
             var buildProjectGuid = Guid.NewGuid().ToString().ToUpper();
-            var buildProjectKind = new Dictionary<string, string>
-                                   {
-                                       [FORMAT_LEGACY] = "FAE04EC0-301F-11D3-BF4B-00C04F79EFBC",
-                                       [FORMAT_SDK] = "9A19103F-16F7-4668-BE54-9A1E7A4F7556"
-                                   }[projectFormat];
 
-            FileSystemTasks.EnsureExistingDirectory(rootDirectory / NukeDirectoryName);
+            (rootDirectory / NukeDirectoryName).CreateDirectory();
 
             WriteBuildScripts(
                 scriptDirectory: WorkingDirectory,
                 rootDirectory,
-                solutionDirectory,
                 buildDirectory,
-                buildProjectName,
-                targetPlatform);
+                buildProjectName);
 
             WriteConfigurationFile(rootDirectory, solutionFile);
 
             if (solutionFile != null)
             {
-                var solutionFileContent = ReadAllLines(solutionFile).ToList();
-                var buildProjectFileRelative = solutionDirectory.GetWinRelativePathTo(buildProjectFile);
-                UpdateSolutionFileContent(solutionFileContent, buildProjectFileRelative, buildProjectGuid, buildProjectKind, buildProjectName);
-                WriteAllLines(solutionFile, solutionFileContent, Encoding.UTF8);
+                var solutionFileContent = solutionFile.ReadAllLines().ToList();
+                var buildProjectFileRelative = solutionFile.Parent.GetWinRelativePathTo(buildProjectFile);
+                UpdateSolutionFileContent(solutionFileContent, buildProjectFileRelative, buildProjectGuid, buildProjectName);
+                solutionFile.WriteAllLines(solutionFileContent, Encoding.UTF8);
             }
 
-            WriteAllLines(
-                buildProjectFile,
+            buildProjectFile.WriteAllLines(
                 FillTemplate(
-                    GetTemplate($"_build.{projectFormat}.csproj"),
+                    GetTemplate("_build.csproj"),
                     GetDictionary(
                         new
                         {
-                            SolutionDirectory = buildDirectory.GetWinRelativePathTo(solutionDirectory ?? rootDirectory),
                             RootDirectory = buildDirectory.GetWinRelativePathTo(rootDirectory),
                             ScriptDirectory = buildDirectory.GetWinRelativePathTo(WorkingDirectory),
-                            BuildProjectName = buildProjectName,
-                            BuildProjectGuid = buildProjectGuid,
-                            TargetFramework = targetFramework,
+                            TargetFramework = TARGET_FRAMEWORK,
                             TelemetryVersion = Telemetry.CurrentVersion,
                             NukeVersion = nukeVersion,
-                            NukeVersionMajorMinor = nukeVersion.Split(".").Take(2).JoinDot()
                         })));
 
-            if (projectFormat == FORMAT_LEGACY)
-            {
-                WriteAllLines(
-                    buildDirectory / "packages.config",
-                    FillTemplate(
-                        GetTemplate("_build.legacy.packages.config"),
-                        tokens: GetDictionary(new { NukeVersion = nukeVersion })));
-            }
-
-            WriteAllLines(
-                buildDirectory / "Directory.Build.props",
-                GetTemplate("Directory.Build.props"));
-
-            WriteAllLines(
-                buildDirectory / "Directory.Build.targets",
-                GetTemplate("Directory.Build.targets"));
-
-            WriteAllLines(
-                $"{buildProjectFile}.DotSettings",
-                GetTemplate("_build.csproj.DotSettings"));
-
-            WriteAllLines(
-                buildDirectory / ".editorconfig",
-                GetTemplate(".editorconfig"));
-
-            WriteAllLines(
-                buildDirectory / "Build.cs",
-                FillTemplate(GetTemplate("Build.cs")));
-
-            WriteAllLines(
-                buildDirectory / "Configuration.cs",
-                GetTemplate("Configuration.cs"));
+            (buildDirectory / "Directory.Build.props").WriteAllLines(GetTemplate("Directory.Build.props"));
+            (buildDirectory / "Directory.Build.targets").WriteAllLines(GetTemplate("Directory.Build.targets"));
+            (buildProjectFile + ".DotSettings").WriteAllLines(GetTemplate("_build.csproj.DotSettings"));
+            (buildDirectory / ".editorconfig").WriteAllLines(GetTemplate(".editorconfig"));
+            (buildDirectory / "Build.cs").WriteAllLines(FillTemplate(GetTemplate("Build.cs")));
+            (buildDirectory / "Configuration.cs").WriteAllLines(GetTemplate("Configuration.cs"));
 
             #endregion
+
+            ShowCompletion("Setup");
 
             return 0;
         }
@@ -199,7 +149,6 @@ namespace Nuke.GlobalTool
             List<string> content,
             string buildProjectFileRelative,
             string buildProjectGuid,
-            string buildProjectKind,
             string buildProjectName)
         {
             if (content.Any(x => x.Contains(buildProjectFileRelative)))
@@ -234,7 +183,7 @@ namespace Nuke.GlobalTool
             content.Insert(projectConfigurationIndex + 2, $"\t\t{{{buildProjectGuid}}}.Release|Any CPU.ActiveCfg = Release|Any CPU");
 
             content.Insert(globalIndex,
-                $"Project(\"{{{buildProjectKind}}}\") = \"{buildProjectName}\", \"{buildProjectFileRelative}\", \"{{{buildProjectGuid}}}\"");
+                $"Project(\"{{{PROJECT_KIND}}}\") = \"{buildProjectName}\", \"{buildProjectFileRelative}\", \"{{{buildProjectGuid}}}\"");
             content.Insert(globalIndex + 1,
                 "EndProject");
         }
@@ -248,56 +197,50 @@ namespace Nuke.GlobalTool
         private static void WriteBuildScripts(
             AbsolutePath scriptDirectory,
             AbsolutePath rootDirectory,
-            [CanBeNull] AbsolutePath solutionDirectory,
             AbsolutePath buildDirectory,
-            string buildProjectName,
-            string targetPlatform)
+            string buildProjectName)
         {
-            WriteAllLines(
-                scriptDirectory / "build.cmd",
-                FillTemplate(GetTemplate("build.cmd")));
+            (scriptDirectory / "build.cmd").WriteAllLines(
+                FillTemplate(GetTemplate("build.cmd")),
+                platformFamily: PlatformFamily.Linux);
 
-            WriteAllLines(
-                scriptDirectory / "build.sh",
+            (scriptDirectory / "build.sh").WriteAllLines(
                 FillTemplate(
-                    GetTemplate($"build.{targetPlatform}.sh"),
+                    GetTemplate("build.sh"),
                     tokens: GetDictionary(
                         new
                         {
                             RootDirectory = scriptDirectory.GetUnixRelativePathTo(rootDirectory),
-                            SolutionDirectory = scriptDirectory.GetUnixRelativePathTo(solutionDirectory ?? rootDirectory),
                             BuildDirectory = scriptDirectory.GetUnixRelativePathTo(buildDirectory),
                             BuildProjectName = buildProjectName,
-                            NuGetVersion = "latest"
-                        })));
+                        })),
+                platformFamily: PlatformFamily.Linux);
 
-            WriteAllLines(
-                scriptDirectory / "build.ps1",
+            (scriptDirectory / "build.ps1").WriteAllLines(
                 FillTemplate(
-                    GetTemplate($"build.{targetPlatform}.ps1"),
+                    GetTemplate("build.ps1"),
                     tokens: GetDictionary(
                         new
                         {
                             RootDirectory = scriptDirectory.GetWinRelativePathTo(rootDirectory),
-                            SolutionDirectory = scriptDirectory.GetWinRelativePathTo(solutionDirectory ?? rootDirectory),
                             BuildDirectory = scriptDirectory.GetWinRelativePathTo(buildDirectory),
                             BuildProjectName = buildProjectName,
-                            NuGetVersion = "latest"
-                        })));
+                        })),
+                platformFamily: PlatformFamily.Windows);
 
             MakeExecutable(scriptDirectory / "build.cmd");
             MakeExecutable(scriptDirectory / "build.sh");
 
-            void MakeExecutable(string scriptPath)
+            void MakeExecutable(AbsolutePath scriptFile)
             {
-                if (Directory.Exists(rootDirectory / ".git"))
-                    StartProcess("git", $"update-index --add --chmod=+x {scriptPath}", logInvocation: false, logOutput: false);
+                if (rootDirectory.ContainsDirectory(".git"))
+                    StartProcess("git", $"update-index --add --chmod=+x {scriptFile}", logInvocation: false, logOutput: false);
 
-                if (Directory.Exists(rootDirectory / ".svn"))
-                    StartProcess("svn", $"propset svn:executable on {scriptPath}", logInvocation: false, logOutput: false);
+                if (rootDirectory.ContainsDirectory(".svn"))
+                    StartProcess("svn", $"propset svn:executable on {scriptFile}", logInvocation: false, logOutput: false);
 
                 if (IsUnix)
-                    StartProcess("chmod", $"+x {scriptPath}", logInvocation: false, logOutput: false);
+                    StartProcess("chmod", $"+x {scriptFile}", logInvocation: false, logOutput: false);
             }
         }
 
@@ -307,7 +250,7 @@ namespace Nuke.GlobalTool
             var dictionary = new Dictionary<string, string> { ["$schema"] = $"./{BuildSchemaFileName}" };
             if (solutionFile != null)
                 dictionary["Solution"] = rootDirectory.GetUnixRelativePathTo(solutionFile).ToString();
-            SerializationTasks.JsonSerializeToFile(dictionary, parametersFile);
+            parametersFile.WriteJson(dictionary);
         }
     }
 }

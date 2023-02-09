@@ -45,35 +45,38 @@ on:
     - cron: '* 0 * * *'
 
 jobs:
-  macOS-latest:
-    name: macOS-latest
-    runs-on: macOS-latest
+  macos-latest:
+    name: macos-latest
+    runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
           fetch-depth: 2
-      - name: Cache .nuke/temp, ~/.nuget/packages
-        uses: actions/cache@v2
+      - name: 'Cache: .nuke/temp, ~/.nuget/packages'
+        uses: actions/cache@v3
         with:
           path: |
             .nuke/temp
             ~/.nuget/packages
           key: ${{ runner.os }}-${{ hashFiles('**/global.json', '**/*.csproj') }}
-      - name: Run './build.cmd Test'
+      - name: 'Run: Test'
         run: ./build.cmd Test
         env:
           OptionalInput: ${{ github.event.inputs.OptionalInput }}
           RequiredInput: ${{ github.event.inputs.RequiredInput }}
-      - uses: actions/upload-artifact@v1
+      - name: 'Publish: src'
+        uses: actions/upload-artifact@v3
         with:
           name: src
           path: src
-      - uses: actions/upload-artifact@v1
+      - name: 'Publish: test-results'
+        uses: actions/upload-artifact@v3
         with:
           name: test-results
           path: output/test-results
-      - uses: actions/upload-artifact@v1
+      - name: 'Publish: coverage-report.zip'
+        uses: actions/upload-artifact@v3
         with:
           name: coverage-report.zip
           path: output/coverage-report.zip
@@ -81,31 +84,34 @@ jobs:
     name: ubuntu-latest
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
           fetch-depth: 2
-      - name: Cache .nuke/temp, ~/.nuget/packages
-        uses: actions/cache@v2
+      - name: 'Cache: .nuke/temp, ~/.nuget/packages'
+        uses: actions/cache@v3
         with:
           path: |
             .nuke/temp
             ~/.nuget/packages
           key: ${{ runner.os }}-${{ hashFiles('**/global.json', '**/*.csproj') }}
-      - name: Run './build.cmd Test'
+      - name: 'Run: Test'
         run: ./build.cmd Test
         env:
           OptionalInput: ${{ github.event.inputs.OptionalInput }}
           RequiredInput: ${{ github.event.inputs.RequiredInput }}
-      - uses: actions/upload-artifact@v1
+      - name: 'Publish: src'
+        uses: actions/upload-artifact@v3
         with:
           name: src
           path: src
-      - uses: actions/upload-artifact@v1
+      - name: 'Publish: test-results'
+        uses: actions/upload-artifact@v3
         with:
           name: test-results
           path: output/test-results
-      - uses: actions/upload-artifact@v1
+      - name: 'Publish: coverage-report.zip'
+        uses: actions/upload-artifact@v3
         with:
           name: coverage-report.zip
           path: output/coverage-report.zip
@@ -113,31 +119,34 @@ jobs:
     name: windows-latest
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
           fetch-depth: 2
-      - name: Cache .nuke/temp, ~/.nuget/packages
-        uses: actions/cache@v2
+      - name: 'Cache: .nuke/temp, ~/.nuget/packages'
+        uses: actions/cache@v3
         with:
           path: |
             .nuke/temp
             ~/.nuget/packages
           key: ${{ runner.os }}-${{ hashFiles('**/global.json', '**/*.csproj') }}
-      - name: Run './build.cmd Test'
+      - name: 'Run: Test'
         run: ./build.cmd Test
         env:
           OptionalInput: ${{ github.event.inputs.OptionalInput }}
           RequiredInput: ${{ github.event.inputs.RequiredInput }}
-      - uses: actions/upload-artifact@v1
+      - name: 'Publish: src'
+        uses: actions/upload-artifact@v3
         with:
           name: src
           path: src
-      - uses: actions/upload-artifact@v1
+      - name: 'Publish: test-results'
+        uses: actions/upload-artifact@v3
         with:
           name: test-results
           path: output/test-results
-      - uses: actions/upload-artifact@v1
+      - name: 'Publish: coverage-report.zip'
+        uses: actions/upload-artifact@v3
         with:
           name: coverage-report.zip
           path: output/coverage-report.zip

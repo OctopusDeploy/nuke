@@ -39,8 +39,8 @@ namespace Nuke.Common.CI.GitHubActions
 
         public override string IdPostfix => _name;
         public override Type HostType => typeof(GitHubActions);
-        public override string ConfigurationFile => NukeBuild.RootDirectory / ".github" / "workflows" / $"{_name}.yml";
-        public override IEnumerable<string> GeneratedFiles => new[] { ConfigurationFile };
+        public override AbsolutePath ConfigurationFile => Build.RootDirectory / ".github" / "workflows" / $"{_name}.yml";
+        public override IEnumerable<AbsolutePath> GeneratedFiles => new[] { ConfigurationFile };
 
         public override IEnumerable<string> RelevantTargetNames => InvokedTargets;
         public override IEnumerable<string> IrrelevantTargetNames => new string[0];
@@ -77,7 +77,7 @@ namespace Nuke.Common.CI.GitHubActions
             get => throw new NotSupportedException();
         }
 
-        public uint? FetchDepth
+        public uint FetchDepth
         {
             set => _fetchDepth = value;
             get => throw new NotSupportedException();
@@ -88,9 +88,7 @@ namespace Nuke.Common.CI.GitHubActions
             return new CustomFileWriter(streamWriter, indentationFactor: 2, commentPrefix: "#");
         }
 
-        public override ConfigurationEntity GetConfiguration(
-            NukeBuild build,
-            IReadOnlyCollection<ExecutableTarget> relevantTargets)
+        public override ConfigurationEntity GetConfiguration(IReadOnlyCollection<ExecutableTarget> relevantTargets)
         {
             var configuration = new GitHubActionsConfiguration
                                 {
@@ -138,7 +136,8 @@ namespace Nuke.Common.CI.GitHubActions
 
             yield return new GitHubActionsRunStep
                          {
-                             Command = $"./{BuildCmdPath} {InvokedTargets.JoinSpace()}",
+                             BuildCmdPath = BuildCmdPath,
+                             InvokedTargets = InvokedTargets,
                              Imports = GetImports().ToDictionary(x => x.Key, x => x.Value)
                          };
 
@@ -156,7 +155,7 @@ namespace Nuke.Common.CI.GitHubActions
                     yield return new GitHubActionsArtifactStep
                                  {
                                      Name = artifact.ToString().TrimStart(artifact.Parent.ToString()).TrimStart('/', '\\'),
-                                     Path = NukeBuild.RootDirectory.GetUnixRelativePathTo(artifact)
+                                     Path = Build.RootDirectory.GetUnixRelativePathTo(artifact)
                                  };
                 }
             }

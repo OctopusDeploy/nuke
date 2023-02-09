@@ -3,7 +3,6 @@
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Nuke.Common;
-using Nuke.Common.Execution;
 using Nuke.Common.Tooling;
 using Nuke.Common.Tools;
 using Nuke.Common.Utilities.Collections;
@@ -31,15 +30,15 @@ namespace Nuke.Common.Tools.VSTest
         /// </summary>
         public static string VSTestPath =>
             ToolPathResolver.TryGetEnvironmentExecutable("VSTEST_EXE") ??
-            ToolPathResolver.GetPackageExecutable("Microsoft.TestPlatform", "vstest.console.exe");
+            NuGetToolPathResolver.GetPackageExecutable("Microsoft.TestPlatform", "vstest.console.exe");
         public static Action<OutputType, string> VSTestLogger { get; set; } = ProcessTasks.DefaultLogger;
         /// <summary>
         ///   <p>VSTest.Console.exe is the command-line command that is used to run tests. You can specify several options in any order on the VSTest.Console.exe command line.</p>
         ///   <p>For more details, visit the <a href="https://msdn.microsoft.com/en-us/library/jj155796.aspx">official website</a>.</p>
         /// </summary>
-        public static IReadOnlyCollection<Output> VSTest(string arguments, string workingDirectory = null, IReadOnlyDictionary<string, string> environmentVariables = null, int? timeout = null, bool? logOutput = null, bool? logInvocation = null, Func<string, string> outputFilter = null)
+        public static IReadOnlyCollection<Output> VSTest(ref ArgumentStringHandler arguments, string workingDirectory = null, IReadOnlyDictionary<string, string> environmentVariables = null, int? timeout = null, bool? logOutput = null, bool? logInvocation = null, Action<OutputType, string> customLogger = null)
         {
-            using var process = ProcessTasks.StartProcess(VSTestPath, arguments, workingDirectory, environmentVariables, timeout, logOutput, logInvocation, VSTestLogger, outputFilter);
+            using var process = ProcessTasks.StartProcess(VSTestPath, ref arguments, workingDirectory, environmentVariables, timeout, logOutput, logInvocation, customLogger ?? VSTestLogger);
             process.AssertZeroExitCode();
             return process.Output;
         }
@@ -153,7 +152,7 @@ namespace Nuke.Common.Tools.VSTest
         ///   Path to the VSTest executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? VSTestTasks.VSTestPath;
-        public override Action<OutputType, string> ProcessCustomLogger => VSTestTasks.VSTestLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? VSTestTasks.VSTestLogger;
         /// <summary>
         ///   Run tests from the specified files. Separate multiple test file names with spaces.
         /// </summary>

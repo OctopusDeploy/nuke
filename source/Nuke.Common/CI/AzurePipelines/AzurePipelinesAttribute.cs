@@ -50,9 +50,9 @@ namespace Nuke.Common.CI.AzurePipelines
         public override string IdPostfix => _suffix;
 
         public override Type HostType => typeof(AzurePipelines);
-        public override string ConfigurationFile => ConfigurationDirectory / ConfigurationFileName;
-        public override IEnumerable<string> GeneratedFiles => new[] { ConfigurationFile };
-        protected virtual AbsolutePath ConfigurationDirectory => NukeBuild.RootDirectory;
+        public override AbsolutePath ConfigurationFile => ConfigurationDirectory / ConfigurationFileName;
+        public override IEnumerable<AbsolutePath> GeneratedFiles => new[] { ConfigurationFile };
+        protected virtual AbsolutePath ConfigurationDirectory => Build.RootDirectory;
         private string ConfigurationFileName => _suffix != null ? $"azure-pipelines.{_suffix}.yml" : "azure-pipelines.yml";
 
         public override IEnumerable<string> RelevantTargetNames => InvokedTargets;
@@ -123,7 +123,7 @@ namespace Nuke.Common.CI.AzurePipelines
             return new CustomFileWriter(streamWriter, indentationFactor: 2, commentPrefix: "#");
         }
 
-        public override ConfigurationEntity GetConfiguration(NukeBuild build, IReadOnlyCollection<ExecutableTarget> relevantTargets)
+        public override ConfigurationEntity GetConfiguration(IReadOnlyCollection<ExecutableTarget> relevantTargets)
         {
             return new AzurePipelinesConfiguration
                    {
@@ -251,10 +251,10 @@ namespace Nuke.Common.CI.AzurePipelines
                 }
             }
 
-            static string GetArtifactPath(AbsolutePath path)
-                => NukeBuild.RootDirectory.Contains(path)
-                    ? NukeBuild.RootDirectory.GetUnixRelativePathTo(path)
-                    : (string) path;
+            string GetArtifactPath(AbsolutePath path)
+                => Build.RootDirectory.Contains(path)
+                    ? Build.RootDirectory.GetUnixRelativePathTo(path)
+                    : path;
 
             var publishedArtifacts = executableTarget.ArtifactProducts
                 .Select(x => (AbsolutePath) x)
@@ -286,9 +286,10 @@ namespace Nuke.Common.CI.AzurePipelines
 
             foreach (var publishedArtifact in publishedArtifacts)
             {
+                var artifactName = publishedArtifact.Split('/').Last();
                 yield return new AzurePipelinesPublishStep
                              {
-                                 ArtifactName = publishedArtifact.Split('/').Last(),
+                                 ArtifactName = artifactName,
                                  PathToPublish = publishedArtifact
                              };
             }
@@ -307,8 +308,8 @@ namespace Nuke.Common.CI.AzurePipelines
 
         protected virtual string GetArtifact(string artifact)
         {
-            if (NukeBuild.RootDirectory.Contains(artifact))
-                artifact = GetRelativePath(NukeBuild.RootDirectory, artifact);
+            if (Build.RootDirectory.Contains(artifact))
+                artifact = GetRelativePath(Build.RootDirectory, artifact);
 
             return HasPathRoot(artifact)
                 ? artifact

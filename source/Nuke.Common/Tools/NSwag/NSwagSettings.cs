@@ -21,7 +21,7 @@ namespace Nuke.Common.Tools.NSwag
 
         private bool IsNetCore => NSwagRuntime != null && NSwagRuntime.StartsWith("Net", StringComparison.OrdinalIgnoreCase);
 
-        public override Action<OutputType, string> ProcessCustomLogger { get; }
+        public override Action<OutputType, string> ProcessCustomLogger { get; internal set; }
 
         [NotNull]
         protected override Arguments ConfigureProcessArguments([NotNull] Arguments arguments)
@@ -54,7 +54,7 @@ namespace Nuke.Common.Tools.NSwag
 
         private AbsolutePath GetPackageFrameworkDir()
         {
-            var package = NuGetPackageResolver.GetLocalInstalledPackage("nswag.msbuild", ToolPathResolver.NuGetPackagesConfigFile);
+            var package = NuGetPackageResolver.GetLocalInstalledPackage("nswag.msbuild", NuGetToolPathResolver.NuGetPackagesConfigFile);
             return package.Directory / (package.Version.Version >= new Version(major: 11, minor: 18, build: 1) ? "tools" : "build");
         }
     }

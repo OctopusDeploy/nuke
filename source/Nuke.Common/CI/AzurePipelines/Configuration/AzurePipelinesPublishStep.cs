@@ -19,10 +19,11 @@ namespace Nuke.Common.CI.AzurePipelines.Configuration
         {
             using (writer.WriteBlock("- task: PublishBuildArtifacts@1"))
             {
+                writer.WriteLine("displayName: " + $"Publish: {ArtifactName}".SingleQuote());
                 using (writer.WriteBlock("inputs:"))
                 {
                     writer.WriteLine($"artifactName: {ArtifactName}");
-                    writer.WriteLine($"pathtoPublish: {PathToPublish.SingleQuote()}");
+                    writer.WriteLine($"pathToPublish: {PathToPublish.SingleQuote()}");
                 }
             }
         }

@@ -4,7 +4,6 @@
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Nuke.Common;
-using Nuke.Common.Execution;
 using Nuke.Common.Tooling;
 using Nuke.Common.Tools;
 using Nuke.Common.Utilities.Collections;
@@ -38,9 +37,9 @@ namespace Nuke.Common.Tools.Docker
         ///   <p>Docker is an open platform for developing, shipping, and running applications. Docker enables you to separate your applications from your infrastructure so you can deliver software quickly. With Docker, you can manage your infrastructure in the same ways you manage your applications. By taking advantage of Docker’s methodologies for shipping, testing, and deploying code quickly, you can significantly reduce the delay between writing code and running it in production.</p>
         ///   <p>For more details, visit the <a href="https://www.docker.com/">official website</a>.</p>
         /// </summary>
-        public static IReadOnlyCollection<Output> Docker(string arguments, string workingDirectory = null, IReadOnlyDictionary<string, string> environmentVariables = null, int? timeout = null, bool? logOutput = null, bool? logInvocation = null, Func<string, string> outputFilter = null)
+        public static IReadOnlyCollection<Output> Docker(ref ArgumentStringHandler arguments, string workingDirectory = null, IReadOnlyDictionary<string, string> environmentVariables = null, int? timeout = null, bool? logOutput = null, bool? logInvocation = null, Action<OutputType, string> customLogger = null)
         {
-            using var process = ProcessTasks.StartProcess(DockerPath, arguments, workingDirectory, environmentVariables, timeout, logOutput, logInvocation, DockerLogger, outputFilter);
+            using var process = ProcessTasks.StartProcess(DockerPath, ref arguments, workingDirectory, environmentVariables, timeout, logOutput, logInvocation, customLogger ?? DockerLogger);
             process.AssertZeroExitCode();
             return process.Output;
         }
@@ -5033,6 +5032,7 @@ namespace Nuke.Common.Tools.Docker
         ///   <ul>
         ///     <li><c>&lt;cliSettings&gt;</c> via <see cref="DockerImagePushSettings.CliSettings"/></li>
         ///     <li><c>&lt;name&gt;</c> via <see cref="DockerImagePushSettings.Name"/></li>
+        ///     <li><c>--all-tags</c> via <see cref="DockerImagePushSettings.AllTags"/></li>
         ///     <li><c>--disable-content-trust</c> via <see cref="DockerImagePushSettings.DisableContentTrust"/></li>
         ///   </ul>
         /// </remarks>
@@ -5052,6 +5052,7 @@ namespace Nuke.Common.Tools.Docker
         ///   <ul>
         ///     <li><c>&lt;cliSettings&gt;</c> via <see cref="DockerImagePushSettings.CliSettings"/></li>
         ///     <li><c>&lt;name&gt;</c> via <see cref="DockerImagePushSettings.Name"/></li>
+        ///     <li><c>--all-tags</c> via <see cref="DockerImagePushSettings.AllTags"/></li>
         ///     <li><c>--disable-content-trust</c> via <see cref="DockerImagePushSettings.DisableContentTrust"/></li>
         ///   </ul>
         /// </remarks>
@@ -5068,6 +5069,7 @@ namespace Nuke.Common.Tools.Docker
         ///   <ul>
         ///     <li><c>&lt;cliSettings&gt;</c> via <see cref="DockerImagePushSettings.CliSettings"/></li>
         ///     <li><c>&lt;name&gt;</c> via <see cref="DockerImagePushSettings.Name"/></li>
+        ///     <li><c>--all-tags</c> via <see cref="DockerImagePushSettings.AllTags"/></li>
         ///     <li><c>--disable-content-trust</c> via <see cref="DockerImagePushSettings.DisableContentTrust"/></li>
         ///   </ul>
         /// </remarks>
@@ -7445,6 +7447,7 @@ namespace Nuke.Common.Tools.Docker
         ///   <ul>
         ///     <li><c>&lt;cliSettings&gt;</c> via <see cref="DockerPushSettings.CliSettings"/></li>
         ///     <li><c>&lt;name&gt;</c> via <see cref="DockerPushSettings.Name"/></li>
+        ///     <li><c>--all-tags</c> via <see cref="DockerPushSettings.AllTags"/></li>
         ///     <li><c>--disable-content-trust</c> via <see cref="DockerPushSettings.DisableContentTrust"/></li>
         ///   </ul>
         /// </remarks>
@@ -7464,6 +7467,7 @@ namespace Nuke.Common.Tools.Docker
         ///   <ul>
         ///     <li><c>&lt;cliSettings&gt;</c> via <see cref="DockerPushSettings.CliSettings"/></li>
         ///     <li><c>&lt;name&gt;</c> via <see cref="DockerPushSettings.Name"/></li>
+        ///     <li><c>--all-tags</c> via <see cref="DockerPushSettings.AllTags"/></li>
         ///     <li><c>--disable-content-trust</c> via <see cref="DockerPushSettings.DisableContentTrust"/></li>
         ///   </ul>
         /// </remarks>
@@ -7480,6 +7484,7 @@ namespace Nuke.Common.Tools.Docker
         ///   <ul>
         ///     <li><c>&lt;cliSettings&gt;</c> via <see cref="DockerPushSettings.CliSettings"/></li>
         ///     <li><c>&lt;name&gt;</c> via <see cref="DockerPushSettings.Name"/></li>
+        ///     <li><c>--all-tags</c> via <see cref="DockerPushSettings.AllTags"/></li>
         ///     <li><c>--disable-content-trust</c> via <see cref="DockerPushSettings.DisableContentTrust"/></li>
         ///   </ul>
         /// </remarks>
@@ -12361,7 +12366,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   CONFIG
         /// </summary>
@@ -12390,7 +12395,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Read from tar archive file, instead of STDIN.
         /// </summary>
@@ -12423,7 +12428,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Provide filter values (e.g. 'until=&lt;timestamp&gt;').
         /// </summary>
@@ -12456,7 +12461,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -12479,7 +12484,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Kubernetes config file.
         /// </summary>
@@ -12512,7 +12517,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   CONTAINER
         /// </summary>
@@ -12545,7 +12550,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Download all tagged images in the repository.
         /// </summary>
@@ -12593,7 +12598,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -12616,7 +12621,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -12639,7 +12644,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -12662,7 +12667,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Format the output using the given Go template.
         /// </summary>
@@ -12701,7 +12706,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -12724,7 +12729,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   NAME
         /// </summary>
@@ -12752,7 +12757,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -12775,7 +12780,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Filter output based on conditions provided.
         /// </summary>
@@ -12813,7 +12818,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Default orchestrator for stack operations to use with this context (swarm|kubernetes|all).
         /// </summary>
@@ -12861,7 +12866,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Filter output based on conditions provided.
         /// </summary>
@@ -12909,7 +12914,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   CONTAINER
         /// </summary>
@@ -12942,7 +12947,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   CONTAINER
         /// </summary>
@@ -12975,7 +12980,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   SOURCE_IMAGE[:TAG]
         /// </summary>
@@ -13008,7 +13013,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Format the output using the given Go template.
         /// </summary>
@@ -13047,7 +13052,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -13070,7 +13075,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Write to a file, instead of STDOUT.
         /// </summary>
@@ -13103,7 +13108,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Pretty-print images using a Go template.
         /// </summary>
@@ -13151,7 +13156,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Specify configurations to expose to the service.
         /// </summary>
@@ -13533,7 +13538,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Filter output based on conditions provided.
         /// </summary>
@@ -13587,7 +13592,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Seconds to wait for stop before killing it.
         /// </summary>
@@ -13621,7 +13626,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -13644,7 +13649,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Block IO (relative weight), between 10 and 1000, or 0 to disable (default 0).
         /// </summary>
@@ -13748,7 +13753,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Compress the context using gzip.
         /// </summary>
@@ -13786,7 +13791,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Format the output using the given Go template.
         /// </summary>
@@ -13814,7 +13819,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Provide filter values (e.g. 'label=&lt;label&gt;').
         /// </summary>
@@ -13847,7 +13852,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Skip image verification.
         /// </summary>
@@ -13895,7 +13900,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -13918,7 +13923,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Only display token.
         /// </summary>
@@ -13956,7 +13961,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Availability of the node ("active"|"pause"|"drain").
         /// </summary>
@@ -14006,7 +14011,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   OPTIONS
         /// </summary>
@@ -14045,7 +14050,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Change manager autolocking setting (true|false).
         /// </summary>
@@ -14103,7 +14108,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Show extra details provided to logs.
         /// </summary>
@@ -14176,7 +14181,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Filter output based on conditions provided.
         /// </summary>
@@ -14214,7 +14219,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -14237,7 +14242,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Provide filter values (e.g. 'driver=bridge').
         /// </summary>
@@ -14280,7 +14285,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Provide filter values (e.g. 'enabled=true').
         /// </summary>
@@ -14323,7 +14328,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Force the removal of an active plugin.
         /// </summary>
@@ -14357,7 +14362,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Add a custom host-to-IP mapping (host:ip).
         /// </summary>
@@ -14566,7 +14571,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Do not prompt for confirmation.
         /// </summary>
@@ -14599,7 +14604,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Force removal of the image.
         /// </summary>
@@ -14638,7 +14643,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   NETWORK
         /// </summary>
@@ -14667,7 +14672,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Format the output using the given Go template.
         /// </summary>
@@ -14700,7 +14705,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Secret driver.
         /// </summary>
@@ -14749,7 +14754,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   SERVICE
         /// </summary>
@@ -14778,7 +14783,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Name for the loaded key.
         /// </summary>
@@ -14811,7 +14816,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   SECRET
         /// </summary>
@@ -14840,7 +14845,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Format the output using the given Go template.
         /// </summary>
@@ -14874,7 +14879,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Write to a file, instead of STDOUT.
         /// </summary>
@@ -14908,7 +14913,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -14931,7 +14936,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Override the key sequence for detaching a container.
         /// </summary>
@@ -14974,7 +14979,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Default orchestrator for stack operations to use with this context (swarm|kubernetes|all).
         /// </summary>
@@ -15027,7 +15032,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Config labels.
         /// </summary>
@@ -15071,7 +15076,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Format the output using the given Go template.
         /// </summary>
@@ -15105,7 +15110,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Seconds to wait for stop before killing it.
         /// </summary>
@@ -15139,7 +15144,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Provide filter values (e.g. 'until=&lt;timestamp&gt;').
         /// </summary>
@@ -15172,7 +15177,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Allow communication with an insecure registry.
         /// </summary>
@@ -15215,7 +15220,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Format the output using the given Go template.
         /// </summary>
@@ -15243,7 +15248,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Author (e.g., "John Hannibal Smith &lt;hannibal@a-team.com&gt;").
         /// </summary>
@@ -15297,7 +15302,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Path to a Distributed Application Bundle file.
         /// </summary>
@@ -15356,7 +15361,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   SERVICE=REPLICAS
         /// </summary>
@@ -15385,7 +15390,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Add a custom host-to-IP mapping (host:ip).
         /// </summary>
@@ -15962,7 +15967,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Add a custom host-to-IP mapping (host:ip).
         /// </summary>
@@ -16524,7 +16529,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Service command args.
         /// </summary>
@@ -16999,7 +17004,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   CONTAINER
         /// </summary>
@@ -17032,7 +17037,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -17055,7 +17060,11 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
+        /// <summary>
+        ///   Push all tagged images in the repository.
+        /// </summary>
+        public virtual bool? AllTags { get; internal set; }
         /// <summary>
         ///   Skip image signing.
         /// </summary>
@@ -17068,6 +17077,7 @@ namespace Nuke.Common.Tools.Docker
         {
             arguments
               .Add("image push")
+              .Add("--all-tags", AllTags)
               .Add("--disable-content-trust", DisableContentTrust)
               .Add("{value}", Name)
               .Add("{value}", GetCliSettings(), customValue: true);
@@ -17088,7 +17098,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Format the output using the given Go template.
         /// </summary>
@@ -17127,7 +17137,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Add network-scoped alias for the container.
         /// </summary>
@@ -17194,7 +17204,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Filter output based on conditions provided.
         /// </summary>
@@ -17232,7 +17242,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Force this node to leave the swarm, ignoring warnings.
         /// </summary>
@@ -17260,7 +17270,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Show all images (default hides intermediate images).
         /// </summary>
@@ -17318,7 +17328,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   override default location of containerd endpoint.
         /// </summary>
@@ -17361,7 +17371,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Filter output based on conditions provided.
         /// </summary>
@@ -17404,7 +17414,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Format the output using the given Go template.
         /// </summary>
@@ -17448,7 +17458,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   override default location of containerd endpoint.
         /// </summary>
@@ -17511,7 +17521,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Override the key sequence for detaching a container.
         /// </summary>
@@ -17554,7 +17564,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   CONTAINER
         /// </summary>
@@ -17583,7 +17593,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Path to the PEM-formatted root CA certificate to use for the new cluster.
         /// </summary>
@@ -17641,7 +17651,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   COMMAND
         /// </summary>
@@ -17669,7 +17679,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Remove all unused images not just dangling ones.
         /// </summary>
@@ -17712,7 +17722,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -17735,7 +17745,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   CONTAINER
         /// </summary>
@@ -17764,7 +17774,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Author (e.g., "John Hannibal Smith &lt;hannibal@a-team.com&gt;").
         /// </summary>
@@ -17818,7 +17828,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Pretty-print contexts using a Go template.
         /// </summary>
@@ -17851,7 +17861,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   CONTEXT
         /// </summary>
@@ -17880,7 +17890,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Filter output based on conditions provided.
         /// </summary>
@@ -17938,7 +17948,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Add a custom host-to-IP mapping (host:ip).
         /// </summary>
@@ -18500,7 +18510,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Specify volume driver name.
         /// </summary>
@@ -18550,7 +18560,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -18573,7 +18583,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Password.
         /// </summary>
@@ -18611,7 +18621,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Only display token.
         /// </summary>
@@ -18644,7 +18654,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Attach STDOUT/STDERR and forward signals.
         /// </summary>
@@ -18698,7 +18708,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Advertised address (format: &lt;ip|interface&gt;[:port]).
         /// </summary>
@@ -18796,7 +18806,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   CONTAINER
         /// </summary>
@@ -18824,7 +18834,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Seconds to wait for stop before killing the container.
         /// </summary>
@@ -18858,7 +18868,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -18881,7 +18891,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Force the disable of an active plugin.
         /// </summary>
@@ -18914,7 +18924,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   CONTAINER
         /// </summary>
@@ -18943,7 +18953,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   CONTEXT
         /// </summary>
@@ -18976,7 +18986,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Force the removal of a running container (uses SIGKILL).
         /// </summary>
@@ -19020,7 +19030,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Path to a Distributed Application Bundle file.
         /// </summary>
@@ -19079,7 +19089,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Force remove a node from the swarm.
         /// </summary>
@@ -19113,7 +19123,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Use a custom checkpoint storage directory.
         /// </summary>
@@ -19151,7 +19161,11 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
+        /// <summary>
+        ///   Push all tagged images in the repository.
+        /// </summary>
+        public virtual bool? AllTags { get; internal set; }
         /// <summary>
         ///   Skip image signing.
         /// </summary>
@@ -19164,6 +19178,7 @@ namespace Nuke.Common.Tools.Docker
         {
             arguments
               .Add("push")
+              .Add("--all-tags", AllTags)
               .Add("--disable-content-trust", DisableContentTrust)
               .Add("{value}", Name)
               .Add("{value}", GetCliSettings(), customValue: true);
@@ -19184,7 +19199,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Enable manual container attachment.
         /// </summary>
@@ -19299,7 +19314,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Provide filter values (e.g. 'dangling=true').
         /// </summary>
@@ -19337,7 +19352,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   IMAGE[:TAG]
         /// </summary>
@@ -19366,7 +19381,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Format the output using the given Go template.
         /// </summary>
@@ -19405,7 +19420,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   override default location of containerd endpoint.
         /// </summary>
@@ -19468,7 +19483,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   CONTEXT
         /// </summary>
@@ -19496,7 +19511,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Force the removal of one or more volumes.
         /// </summary>
@@ -19530,7 +19545,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   MANIFEST_LIST
         /// </summary>
@@ -19564,7 +19579,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Allow push to an insecure registry.
         /// </summary>
@@ -19602,7 +19617,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   HTTP client timeout (in seconds).
         /// </summary>
@@ -19635,7 +19650,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Apply Dockerfile instruction to the created image.
         /// </summary>
@@ -19684,7 +19699,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Add a custom host-to-IP mapping (host:ip).
         /// </summary>
@@ -20261,7 +20276,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Format the output using the given Go template.
         /// </summary>
@@ -20300,7 +20315,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Write to a file, instead of STDOUT.
         /// </summary>
@@ -20334,7 +20349,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Show all containers (default shows just running).
         /// </summary>
@@ -20383,7 +20398,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Detached mode: run command in the background.
         /// </summary>
@@ -20463,7 +20478,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Filter output based on conditions provided.
         /// </summary>
@@ -20501,7 +20516,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Advertised address (format: &lt;ip|interface&gt;[:port]).
         /// </summary>
@@ -20549,7 +20564,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Show extra details provided to logs.
         /// </summary>
@@ -20607,7 +20622,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Use a custom checkpoint storage directory.
         /// </summary>
@@ -20640,7 +20655,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Signal to send to the container.
         /// </summary>
@@ -20674,7 +20689,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Local name for plugin.
         /// </summary>
@@ -20728,7 +20743,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Remove all unused images, not just dangling ones.
         /// </summary>
@@ -20766,7 +20781,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Apply Dockerfile instruction to the created image.
         /// </summary>
@@ -20815,7 +20830,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   CONTAINER
         /// </summary>
@@ -20843,7 +20858,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   CONTAINER
         /// </summary>
@@ -20872,7 +20887,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Show all containers (default shows just running).
         /// </summary>
@@ -20935,7 +20950,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Filter output based on conditions provided.
         /// </summary>
@@ -20989,7 +21004,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   CONTAINER
         /// </summary>
@@ -21022,7 +21037,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   CONTAINER
         /// </summary>
@@ -21055,7 +21070,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Pretty-print images using a Go template.
         /// </summary>
@@ -21103,7 +21118,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Show all containers (default shows just running).
         /// </summary>
@@ -21166,7 +21181,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   SOURCE_IMAGE[:TAG]
         /// </summary>
@@ -21199,7 +21214,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Write to a file, instead of STDOUT.
         /// </summary>
@@ -21232,7 +21247,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Force the container to disconnect from a network.
         /// </summary>
@@ -21270,7 +21285,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Add a custom host-to-IP mapping (host:ip).
         /// </summary>
@@ -21479,7 +21494,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Add a custom host-to-IP mapping <c>host:ip</c>.
         /// </summary>
@@ -21695,7 +21710,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Show all containers (default shows just running).
         /// </summary>
@@ -21744,7 +21759,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Only show automated builds.
         /// </summary>
@@ -21802,7 +21817,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   COMMAND
         /// </summary>
@@ -21830,7 +21845,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Skip image signing.
         /// </summary>
@@ -21863,7 +21878,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Read from tar archive file, instead of STDIN.
         /// </summary>
@@ -21896,7 +21911,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -21919,7 +21934,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Force the removal of a running container (uses SIGKILL).
         /// </summary>
@@ -21963,7 +21978,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Block IO (relative weight), between 10 and 1000, or 0 to disable (default 0).
         /// </summary>
@@ -22067,7 +22082,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   PLUGIN
         /// </summary>
@@ -22101,7 +22116,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   CONTAINER
         /// </summary>
@@ -22130,7 +22145,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Export as a kubeconfig file.
         /// </summary>
@@ -22168,7 +22183,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Set architecture.
         /// </summary>
@@ -22222,7 +22237,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Download all tagged images in the repository.
         /// </summary>
@@ -22270,7 +22285,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Filter output based on conditions provided.
         /// </summary>
@@ -22313,7 +22328,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   List stacks from all Kubernetes namespaces.
         /// </summary>
@@ -22352,7 +22367,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Format the output using the given Go template.
         /// </summary>
@@ -22391,7 +22406,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Signal to send to the container.
         /// </summary>
@@ -22425,7 +22440,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Use a custom checkpoint storage directory.
         /// </summary>
@@ -22468,7 +22483,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   CONTAINER
         /// </summary>
@@ -22497,7 +22512,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Show extra details provided to logs.
         /// </summary>
@@ -22555,7 +22570,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Format the output using the given Go template.
         /// </summary>
@@ -22594,7 +22609,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   NODE
         /// </summary>
@@ -22623,7 +22638,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   NODE
         /// </summary>
@@ -22652,7 +22667,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Detached mode: run command in the background.
         /// </summary>
@@ -22732,7 +22747,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Force removal of the image.
         /// </summary>
@@ -22771,7 +22786,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -22794,7 +22809,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -22817,7 +22832,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   COMMAND
         /// </summary>
@@ -22845,7 +22860,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Attach STDOUT/STDERR and forward signals.
         /// </summary>
@@ -22899,7 +22914,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Format the output using the given Go template.
         /// </summary>
@@ -22933,7 +22948,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   [SERVER]
         /// </summary>
@@ -22961,7 +22976,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -22984,7 +22999,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Show all images (default hides intermediate images).
         /// </summary>
@@ -23042,7 +23057,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Pretty-print images using a Go template.
         /// </summary>
@@ -23075,7 +23090,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Exit immediately instead of waiting for the service to converge.
         /// </summary>
@@ -23113,7 +23128,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Seconds to wait for stop before killing the container.
         /// </summary>
@@ -23147,7 +23162,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Do not prompt for confirmation before removing the most recent signer.
         /// </summary>
@@ -23186,7 +23201,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Kubernetes namespace to use.
         /// </summary>
@@ -23220,7 +23235,7 @@ namespace Nuke.Common.Tools.Docker
         ///   Path to the Docker executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? DockerTasks.DockerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => DockerTasks.DockerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? DockerTasks.DockerLogger;
         /// <summary>
         ///   Add a custom host-to-IP mapping (host:ip).
         /// </summary>
@@ -23414,6 +23429,45 @@ namespace Nuke.Common.Tools.Docker
               .Add("{value}", GetCliSettings(), customValue: true);
             return base.ConfigureProcessArguments(arguments);
         }
+    }
+    #endregion
+    #region DockerRunTargetSettings
+    /// <summary>
+    ///   Used within <see cref="DockerTasks"/>.
+    /// </summary>
+    [PublicAPI]
+    [ExcludeFromCodeCoverage]
+    [Serializable]
+    public partial class DockerRunTargetSettings : DockerRunSettings
+    {
+        /// <summary>
+        ///   Whether to execute a <c>docker pull</c> before running the container.
+        /// </summary>
+        public virtual bool? PullImage { get; internal set; }
+        /// <summary>
+        ///   The .NET Runtime Identifier (<a href="https://docs.microsoft.com/en-us/dotnet/core/rid-catalog">RID</a>) to use to publish the build project. For example, <c>linux-x64</c>, <c>linux-arm64</c>, <c>win-x64</c>.
+        /// </summary>
+        public virtual string DotNetRuntime { get; internal set; }
+        /// <summary>
+        ///   Enables caching of the build executable.
+        /// </summary>
+        public virtual bool? BuildCaching { get; internal set; }
+        /// <summary>
+        ///   Whether to keep the <c>.env.&lt;target&gt;</c> file located under <c>build/bin/&lt;rid&gt;</c> after the target is complete.
+        /// </summary>
+        public virtual bool? KeepEnvFile { get; internal set; }
+        /// <summary>
+        ///   The username for <c>docker login</c>.
+        /// </summary>
+        public virtual string Username { get; internal set; }
+        /// <summary>
+        ///   The password for <c>docker login</c>.
+        /// </summary>
+        public virtual string Password { get; internal set; }
+        /// <summary>
+        ///   The server for <c>docker login</c>.
+        /// </summary>
+        public virtual string Server { get; internal set; }
     }
     #endregion
     #region CliSettings
@@ -49148,6 +49202,63 @@ namespace Nuke.Common.Tools.Docker
     [ExcludeFromCodeCoverage]
     public static partial class DockerImagePushSettingsExtensions
     {
+        #region AllTags
+        /// <summary>
+        ///   <p><em>Sets <see cref="DockerImagePushSettings.AllTags"/></em></p>
+        ///   <p>Push all tagged images in the repository.</p>
+        /// </summary>
+        [Pure]
+        public static T SetAllTags<T>(this T toolSettings, bool? allTags) where T : DockerImagePushSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.AllTags = allTags;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Resets <see cref="DockerImagePushSettings.AllTags"/></em></p>
+        ///   <p>Push all tagged images in the repository.</p>
+        /// </summary>
+        [Pure]
+        public static T ResetAllTags<T>(this T toolSettings) where T : DockerImagePushSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.AllTags = null;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Enables <see cref="DockerImagePushSettings.AllTags"/></em></p>
+        ///   <p>Push all tagged images in the repository.</p>
+        /// </summary>
+        [Pure]
+        public static T EnableAllTags<T>(this T toolSettings) where T : DockerImagePushSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.AllTags = true;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Disables <see cref="DockerImagePushSettings.AllTags"/></em></p>
+        ///   <p>Push all tagged images in the repository.</p>
+        /// </summary>
+        [Pure]
+        public static T DisableAllTags<T>(this T toolSettings) where T : DockerImagePushSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.AllTags = false;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Toggles <see cref="DockerImagePushSettings.AllTags"/></em></p>
+        ///   <p>Push all tagged images in the repository.</p>
+        /// </summary>
+        [Pure]
+        public static T ToggleAllTags<T>(this T toolSettings) where T : DockerImagePushSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.AllTags = !toolSettings.AllTags;
+            return toolSettings;
+        }
+        #endregion
         #region DisableContentTrust
         /// <summary>
         ///   <p><em>Sets <see cref="DockerImagePushSettings.DisableContentTrust"/></em></p>
@@ -59710,6 +59821,63 @@ namespace Nuke.Common.Tools.Docker
     [ExcludeFromCodeCoverage]
     public static partial class DockerPushSettingsExtensions
     {
+        #region AllTags
+        /// <summary>
+        ///   <p><em>Sets <see cref="DockerPushSettings.AllTags"/></em></p>
+        ///   <p>Push all tagged images in the repository.</p>
+        /// </summary>
+        [Pure]
+        public static T SetAllTags<T>(this T toolSettings, bool? allTags) where T : DockerPushSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.AllTags = allTags;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Resets <see cref="DockerPushSettings.AllTags"/></em></p>
+        ///   <p>Push all tagged images in the repository.</p>
+        /// </summary>
+        [Pure]
+        public static T ResetAllTags<T>(this T toolSettings) where T : DockerPushSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.AllTags = null;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Enables <see cref="DockerPushSettings.AllTags"/></em></p>
+        ///   <p>Push all tagged images in the repository.</p>
+        /// </summary>
+        [Pure]
+        public static T EnableAllTags<T>(this T toolSettings) where T : DockerPushSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.AllTags = true;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Disables <see cref="DockerPushSettings.AllTags"/></em></p>
+        ///   <p>Push all tagged images in the repository.</p>
+        /// </summary>
+        [Pure]
+        public static T DisableAllTags<T>(this T toolSettings) where T : DockerPushSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.AllTags = false;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Toggles <see cref="DockerPushSettings.AllTags"/></em></p>
+        ///   <p>Push all tagged images in the repository.</p>
+        /// </summary>
+        [Pure]
+        public static T ToggleAllTags<T>(this T toolSettings) where T : DockerPushSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.AllTags = !toolSettings.AllTags;
+            return toolSettings;
+        }
+        #endregion
         #region DisableContentTrust
         /// <summary>
         ///   <p><em>Sets <see cref="DockerPushSettings.DisableContentTrust"/></em></p>
@@ -81413,6 +81581,283 @@ namespace Nuke.Common.Tools.Docker
         {
             toolSettings = toolSettings.NewInstance();
             toolSettings.Path = null;
+            return toolSettings;
+        }
+        #endregion
+    }
+    #endregion
+    #region DockerRunTargetSettingsExtensions
+    /// <summary>
+    ///   Used within <see cref="DockerTasks"/>.
+    /// </summary>
+    [PublicAPI]
+    [ExcludeFromCodeCoverage]
+    public static partial class DockerRunTargetSettingsExtensions
+    {
+        #region PullImage
+        /// <summary>
+        ///   <p><em>Sets <see cref="DockerRunTargetSettings.PullImage"/></em></p>
+        ///   <p>Whether to execute a <c>docker pull</c> before running the container.</p>
+        /// </summary>
+        [Pure]
+        public static T SetPullImage<T>(this T toolSettings, bool? pullImage) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.PullImage = pullImage;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Resets <see cref="DockerRunTargetSettings.PullImage"/></em></p>
+        ///   <p>Whether to execute a <c>docker pull</c> before running the container.</p>
+        /// </summary>
+        [Pure]
+        public static T ResetPullImage<T>(this T toolSettings) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.PullImage = null;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Enables <see cref="DockerRunTargetSettings.PullImage"/></em></p>
+        ///   <p>Whether to execute a <c>docker pull</c> before running the container.</p>
+        /// </summary>
+        [Pure]
+        public static T EnablePullImage<T>(this T toolSettings) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.PullImage = true;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Disables <see cref="DockerRunTargetSettings.PullImage"/></em></p>
+        ///   <p>Whether to execute a <c>docker pull</c> before running the container.</p>
+        /// </summary>
+        [Pure]
+        public static T DisablePullImage<T>(this T toolSettings) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.PullImage = false;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Toggles <see cref="DockerRunTargetSettings.PullImage"/></em></p>
+        ///   <p>Whether to execute a <c>docker pull</c> before running the container.</p>
+        /// </summary>
+        [Pure]
+        public static T TogglePullImage<T>(this T toolSettings) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.PullImage = !toolSettings.PullImage;
+            return toolSettings;
+        }
+        #endregion
+        #region DotNetRuntime
+        /// <summary>
+        ///   <p><em>Sets <see cref="DockerRunTargetSettings.DotNetRuntime"/></em></p>
+        ///   <p>The .NET Runtime Identifier (<a href="https://docs.microsoft.com/en-us/dotnet/core/rid-catalog">RID</a>) to use to publish the build project. For example, <c>linux-x64</c>, <c>linux-arm64</c>, <c>win-x64</c>.</p>
+        /// </summary>
+        [Pure]
+        public static T SetDotNetRuntime<T>(this T toolSettings, string dotNetRuntime) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.DotNetRuntime = dotNetRuntime;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Resets <see cref="DockerRunTargetSettings.DotNetRuntime"/></em></p>
+        ///   <p>The .NET Runtime Identifier (<a href="https://docs.microsoft.com/en-us/dotnet/core/rid-catalog">RID</a>) to use to publish the build project. For example, <c>linux-x64</c>, <c>linux-arm64</c>, <c>win-x64</c>.</p>
+        /// </summary>
+        [Pure]
+        public static T ResetDotNetRuntime<T>(this T toolSettings) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.DotNetRuntime = null;
+            return toolSettings;
+        }
+        #endregion
+        #region BuildCaching
+        /// <summary>
+        ///   <p><em>Sets <see cref="DockerRunTargetSettings.BuildCaching"/></em></p>
+        ///   <p>Enables caching of the build executable.</p>
+        /// </summary>
+        [Pure]
+        public static T SetBuildCaching<T>(this T toolSettings, bool? buildCaching) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.BuildCaching = buildCaching;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Resets <see cref="DockerRunTargetSettings.BuildCaching"/></em></p>
+        ///   <p>Enables caching of the build executable.</p>
+        /// </summary>
+        [Pure]
+        public static T ResetBuildCaching<T>(this T toolSettings) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.BuildCaching = null;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Enables <see cref="DockerRunTargetSettings.BuildCaching"/></em></p>
+        ///   <p>Enables caching of the build executable.</p>
+        /// </summary>
+        [Pure]
+        public static T EnableBuildCaching<T>(this T toolSettings) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.BuildCaching = true;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Disables <see cref="DockerRunTargetSettings.BuildCaching"/></em></p>
+        ///   <p>Enables caching of the build executable.</p>
+        /// </summary>
+        [Pure]
+        public static T DisableBuildCaching<T>(this T toolSettings) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.BuildCaching = false;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Toggles <see cref="DockerRunTargetSettings.BuildCaching"/></em></p>
+        ///   <p>Enables caching of the build executable.</p>
+        /// </summary>
+        [Pure]
+        public static T ToggleBuildCaching<T>(this T toolSettings) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.BuildCaching = !toolSettings.BuildCaching;
+            return toolSettings;
+        }
+        #endregion
+        #region KeepEnvFile
+        /// <summary>
+        ///   <p><em>Sets <see cref="DockerRunTargetSettings.KeepEnvFile"/></em></p>
+        ///   <p>Whether to keep the <c>.env.&lt;target&gt;</c> file located under <c>build/bin/&lt;rid&gt;</c> after the target is complete.</p>
+        /// </summary>
+        [Pure]
+        public static T SetKeepEnvFile<T>(this T toolSettings, bool? keepEnvFile) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.KeepEnvFile = keepEnvFile;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Resets <see cref="DockerRunTargetSettings.KeepEnvFile"/></em></p>
+        ///   <p>Whether to keep the <c>.env.&lt;target&gt;</c> file located under <c>build/bin/&lt;rid&gt;</c> after the target is complete.</p>
+        /// </summary>
+        [Pure]
+        public static T ResetKeepEnvFile<T>(this T toolSettings) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.KeepEnvFile = null;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Enables <see cref="DockerRunTargetSettings.KeepEnvFile"/></em></p>
+        ///   <p>Whether to keep the <c>.env.&lt;target&gt;</c> file located under <c>build/bin/&lt;rid&gt;</c> after the target is complete.</p>
+        /// </summary>
+        [Pure]
+        public static T EnableKeepEnvFile<T>(this T toolSettings) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.KeepEnvFile = true;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Disables <see cref="DockerRunTargetSettings.KeepEnvFile"/></em></p>
+        ///   <p>Whether to keep the <c>.env.&lt;target&gt;</c> file located under <c>build/bin/&lt;rid&gt;</c> after the target is complete.</p>
+        /// </summary>
+        [Pure]
+        public static T DisableKeepEnvFile<T>(this T toolSettings) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.KeepEnvFile = false;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Toggles <see cref="DockerRunTargetSettings.KeepEnvFile"/></em></p>
+        ///   <p>Whether to keep the <c>.env.&lt;target&gt;</c> file located under <c>build/bin/&lt;rid&gt;</c> after the target is complete.</p>
+        /// </summary>
+        [Pure]
+        public static T ToggleKeepEnvFile<T>(this T toolSettings) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.KeepEnvFile = !toolSettings.KeepEnvFile;
+            return toolSettings;
+        }
+        #endregion
+        #region Username
+        /// <summary>
+        ///   <p><em>Sets <see cref="DockerRunTargetSettings.Username"/></em></p>
+        ///   <p>The username for <c>docker login</c>.</p>
+        /// </summary>
+        [Pure]
+        public static T SetUsername<T>(this T toolSettings, string username) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.Username = username;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Resets <see cref="DockerRunTargetSettings.Username"/></em></p>
+        ///   <p>The username for <c>docker login</c>.</p>
+        /// </summary>
+        [Pure]
+        public static T ResetUsername<T>(this T toolSettings) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.Username = null;
+            return toolSettings;
+        }
+        #endregion
+        #region Password
+        /// <summary>
+        ///   <p><em>Sets <see cref="DockerRunTargetSettings.Password"/></em></p>
+        ///   <p>The password for <c>docker login</c>.</p>
+        /// </summary>
+        [Pure]
+        public static T SetPassword<T>(this T toolSettings, string password) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.Password = password;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Resets <see cref="DockerRunTargetSettings.Password"/></em></p>
+        ///   <p>The password for <c>docker login</c>.</p>
+        /// </summary>
+        [Pure]
+        public static T ResetPassword<T>(this T toolSettings) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.Password = null;
+            return toolSettings;
+        }
+        #endregion
+        #region Server
+        /// <summary>
+        ///   <p><em>Sets <see cref="DockerRunTargetSettings.Server"/></em></p>
+        ///   <p>The server for <c>docker login</c>.</p>
+        /// </summary>
+        [Pure]
+        public static T SetServer<T>(this T toolSettings, string server) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.Server = server;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Resets <see cref="DockerRunTargetSettings.Server"/></em></p>
+        ///   <p>The server for <c>docker login</c>.</p>
+        /// </summary>
+        [Pure]
+        public static T ResetServer<T>(this T toolSettings) where T : DockerRunTargetSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.Server = null;
             return toolSettings;
         }
         #endregion

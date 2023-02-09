@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "title": "Build Schema",
   "$ref": "#/definitions/build",
+  "title": "Build Schema",
   "definitions": {
     "build": {
       "type": "object",
@@ -24,6 +24,10 @@
           "type": "boolean",
           "description": "Indicates to continue a previously failed build attempt"
         },
+        "DiscordWebhook": {
+          "type": "string",
+          "default": "Secrets must be entered via 'nuke :secrets [profile]'"
+        },
         "GitHubRegistryApiKey": {
           "type": "string",
           "default": "Secrets must be entered via 'nuke :secrets [profile]'"
@@ -34,10 +38,6 @@
         },
         "GitterRoomId": {
           "type": "string"
-        },
-        "GlobalSolution": {
-          "type": "string",
-          "description": "Path to a solution file that is automatically loaded. Default is nuke-global.sln"
         },
         "Help": {
           "type": "boolean",
@@ -50,6 +50,7 @@
             "AppVeyor",
             "AzurePipelines",
             "Bamboo",
+            "Bitbucket",
             "Bitrise",
             "GitHubActions",
             "GitLab",
@@ -69,6 +70,10 @@
         },
         "Major": {
           "type": "boolean"
+        },
+        "MastodonAccessToken": {
+          "type": "string",
+          "default": "Secrets must be entered via 'nuke :secrets [profile]'"
         },
         "NoLogo": {
           "type": "boolean",
@@ -138,9 +143,11 @@
               "ReportDuplicates",
               "ReportIssues",
               "Restore",
+              "RunTargetInDockerImageTest",
               "SignPackages",
               "Test",
-              "UpdateContributors"
+              "UpdateContributors",
+              "UpdateStargazers"
             ]
           }
         },
@@ -180,11 +187,16 @@
               "ReportDuplicates",
               "ReportIssues",
               "Restore",
+              "RunTargetInDockerImageTest",
               "SignPackages",
               "Test",
-              "UpdateContributors"
+              "UpdateContributors",
+              "UpdateStargazers"
             ]
           }
+        },
+        "TestDegreeOfParallelism": {
+          "type": "integer"
         },
         "TwitterAccessToken": {
           "type": "string",

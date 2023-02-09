@@ -3,7 +3,6 @@
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Nuke.Common;
-using Nuke.Common.Execution;
 using Nuke.Common.Tooling;
 using Nuke.Common.Tools;
 using Nuke.Common.Utilities.Collections;
@@ -31,15 +30,15 @@ namespace Nuke.Common.Tools.CodeMetrics
         /// </summary>
         public static string CodeMetricsPath =>
             ToolPathResolver.TryGetEnvironmentExecutable("CODEMETRICS_EXE") ??
-            ToolPathResolver.GetPackageExecutable("Microsoft.CodeAnalysis.Metrics", "Metrics.exe");
+            NuGetToolPathResolver.GetPackageExecutable("Microsoft.CodeAnalysis.Metrics", "Metrics.exe");
         public static Action<OutputType, string> CodeMetricsLogger { get; set; } = ProcessTasks.DefaultLogger;
         /// <summary>
         ///   <p>Code metrics is a set of software measures that provide developers better insight into the code they are developing. By taking advantage of code metrics, developers can understand which types and/or methods should be reworked or more thoroughly tested. Development teams can identify potential risks, understand the current state of a project, and track progress during software development.</p>
         ///   <p>For more details, visit the <a href="https://docs.microsoft.com/en-us/visualstudio/code-quality/code-metrics-values">official website</a>.</p>
         /// </summary>
-        public static IReadOnlyCollection<Output> CodeMetrics(string arguments, string workingDirectory = null, IReadOnlyDictionary<string, string> environmentVariables = null, int? timeout = null, bool? logOutput = null, bool? logInvocation = null, Func<string, string> outputFilter = null)
+        public static IReadOnlyCollection<Output> CodeMetrics(ref ArgumentStringHandler arguments, string workingDirectory = null, IReadOnlyDictionary<string, string> environmentVariables = null, int? timeout = null, bool? logOutput = null, bool? logInvocation = null, Action<OutputType, string> customLogger = null)
         {
-            using var process = ProcessTasks.StartProcess(CodeMetricsPath, arguments, workingDirectory, environmentVariables, timeout, logOutput, logInvocation, CodeMetricsLogger, outputFilter);
+            using var process = ProcessTasks.StartProcess(CodeMetricsPath, ref arguments, workingDirectory, environmentVariables, timeout, logOutput, logInvocation, customLogger ?? CodeMetricsLogger);
             process.AssertZeroExitCode();
             return process.Output;
         }
@@ -108,7 +107,7 @@ namespace Nuke.Common.Tools.CodeMetrics
         ///   Path to the CodeMetrics executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? CodeMetricsTasks.CodeMetricsPath;
-        public override Action<OutputType, string> ProcessCustomLogger => CodeMetricsTasks.CodeMetricsLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? CodeMetricsTasks.CodeMetricsLogger;
         /// <summary>
         ///   Project to analyze.
         /// </summary>

@@ -3,7 +3,6 @@
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Nuke.Common;
-using Nuke.Common.Execution;
 using Nuke.Common.Tooling;
 using Nuke.Common.Tools;
 using Nuke.Common.Utilities.Collections;
@@ -31,15 +30,15 @@ namespace Nuke.Common.Tools.MinVer
         /// </summary>
         public static string MinVerPath =>
             ToolPathResolver.TryGetEnvironmentExecutable("MINVER_EXE") ??
-            ToolPathResolver.GetPackageExecutable("minver-cli", "minver-cli.dll");
+            GetToolPath();
         public static Action<OutputType, string> MinVerLogger { get; set; } = ProcessTasks.DefaultLogger;
         /// <summary>
         ///   <p>Minimalistic versioning using Git tags.</p>
         ///   <p>For more details, visit the <a href="https://github.com/adamralph/minver">official website</a>.</p>
         /// </summary>
-        public static IReadOnlyCollection<Output> MinVer(string arguments, string workingDirectory = null, IReadOnlyDictionary<string, string> environmentVariables = null, int? timeout = null, bool? logOutput = null, bool? logInvocation = null, Func<string, string> outputFilter = null)
+        public static IReadOnlyCollection<Output> MinVer(ref ArgumentStringHandler arguments, string workingDirectory = null, IReadOnlyDictionary<string, string> environmentVariables = null, int? timeout = null, bool? logOutput = null, bool? logInvocation = null, Action<OutputType, string> customLogger = null)
         {
-            using var process = ProcessTasks.StartProcess(MinVerPath, arguments, workingDirectory, environmentVariables, timeout, logOutput, logInvocation, MinVerLogger, outputFilter);
+            using var process = ProcessTasks.StartProcess(MinVerPath, ref arguments, workingDirectory, environmentVariables, timeout, logOutput, logInvocation, customLogger ?? MinVerLogger);
             process.AssertZeroExitCode();
             return process.Output;
         }
@@ -116,14 +115,15 @@ namespace Nuke.Common.Tools.MinVer
         /// <summary>
         ///   Path to the MinVer executable.
         /// </summary>
-        public override string ProcessToolPath => base.ProcessToolPath ?? MinVerTasks.MinVerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => MinVerTasks.MinVerLogger;
+        public override string ProcessToolPath => base.ProcessToolPath ?? GetProcessToolPath();
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? MinVerTasks.MinVerLogger;
         public virtual MinVerVersionPart AutoIncrement { get; internal set; }
         public virtual string BuildMetadata { get; internal set; }
         public virtual string DefaultPreReleasePhase { get; internal set; }
         public virtual string MinimumMajorMinor { get; internal set; }
         public virtual string TagPrefix { get; internal set; }
         public virtual MinVerVerbosity Verbosity { get; internal set; }
+        public virtual string Framework { get; internal set; }
         protected override Arguments ConfigureProcessArguments(Arguments arguments)
         {
             arguments
@@ -295,6 +295,28 @@ namespace Nuke.Common.Tools.MinVer
         {
             toolSettings = toolSettings.NewInstance();
             toolSettings.Verbosity = null;
+            return toolSettings;
+        }
+        #endregion
+        #region Framework
+        /// <summary>
+        ///   <p><em>Sets <see cref="MinVerSettings.Framework"/></em></p>
+        /// </summary>
+        [Pure]
+        public static T SetFramework<T>(this T toolSettings, string framework) where T : MinVerSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.Framework = framework;
+            return toolSettings;
+        }
+        /// <summary>
+        ///   <p><em>Resets <see cref="MinVerSettings.Framework"/></em></p>
+        /// </summary>
+        [Pure]
+        public static T ResetFramework<T>(this T toolSettings) where T : MinVerSettings
+        {
+            toolSettings = toolSettings.NewInstance();
+            toolSettings.Framework = null;
             return toolSettings;
         }
         #endregion

@@ -22,14 +22,16 @@ namespace Nuke.GlobalTool
         [UsedImplicitly]
         public static int AddPackage(string[] args, [CanBeNull] AbsolutePath rootDirectory, [CanBeNull] AbsolutePath buildScript)
         {
+            PrintInfo();
+            Logging.Configure();
             Telemetry.AddPackage();
             ProjectModelTasks.Initialize();
 
             var packageId = args.ElementAt(0);
             var packageVersion =
-                (EnvironmentInfo.GetParameter<string>("version") ??
+                (EnvironmentInfo.GetNamedArgument<string>("version") ??
                  args.ElementAtOrDefault(1) ??
-                 NuGetPackageResolver.GetLatestPackageVersion(packageId, includePrereleases: false).GetAwaiter().GetResult() ??
+                 NuGetVersionResolver.GetLatestVersion(packageId, includePrereleases: false).GetAwaiter().GetResult() ??
                  NuGetPackageResolver.GetGlobalInstalledPackage(packageId, version: null, packagesConfigFile: null)?.Version.ToString())
                 .NotNull("packageVersion != null");
 
