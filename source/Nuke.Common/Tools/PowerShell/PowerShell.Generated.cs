@@ -3,7 +3,6 @@
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Nuke.Common;
-using Nuke.Common.Execution;
 using Nuke.Common.Tooling;
 using Nuke.Common.Tools;
 using Nuke.Common.Utilities.Collections;
@@ -37,9 +36,9 @@ namespace Nuke.Common.Tools.PowerShell
         ///   <p>PowerShell is a cross-platform task automation solution made up of a command-line shell, a scripting language, and a configuration management framework. PowerShell runs on Windows, Linux, and macOS.</p>
         ///   <p>For more details, visit the <a href="https://docs.microsoft.com/en-us/powershell/">official website</a>.</p>
         /// </summary>
-        public static IReadOnlyCollection<Output> PowerShell(string arguments, string workingDirectory = null, IReadOnlyDictionary<string, string> environmentVariables = null, int? timeout = null, bool? logOutput = null, bool? logInvocation = null, Func<string, string> outputFilter = null)
+        public static IReadOnlyCollection<Output> PowerShell(ref ArgumentStringHandler arguments, string workingDirectory = null, IReadOnlyDictionary<string, string> environmentVariables = null, int? timeout = null, bool? logOutput = null, bool? logInvocation = null, Action<OutputType, string> customLogger = null)
         {
-            using var process = ProcessTasks.StartProcess(PowerShellPath, arguments, workingDirectory, environmentVariables, timeout, logOutput, logInvocation, PowerShellLogger, outputFilter);
+            using var process = ProcessTasks.StartProcess(PowerShellPath, ref arguments, workingDirectory, environmentVariables, timeout, logOutput, logInvocation, customLogger ?? PowerShellLogger);
             process.AssertZeroExitCode();
             return process.Output;
         }
@@ -153,7 +152,7 @@ namespace Nuke.Common.Tools.PowerShell
         ///   Path to the PowerShell executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? GetProcessToolPath();
-        public override Action<OutputType, string> ProcessCustomLogger => PowerShellTasks.PowerShellLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? PowerShellTasks.PowerShellLogger;
         /// <summary>
         ///   Loads the specified PowerShell console file. Enter the path and name of the console file. To create a console file, use the Export-Console cmdlet in PowerShell.
         /// </summary>

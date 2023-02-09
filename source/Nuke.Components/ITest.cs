@@ -26,6 +26,8 @@ namespace Nuke.Components
     {
         AbsolutePath TestResultDirectory => ArtifactsDirectory / "test-results";
 
+        int TestDegreeOfParallelism => 1;
+
         Target Test => _ => _
             .DependsOn(Compile)
             .Produces(TestResultDirectory / "*.trx")
@@ -40,7 +42,8 @@ namespace Nuke.Components
                             .CombineWith(TestProjects, (_, v) => _
                                 .Apply(TestProjectSettingsBase, v)
                                 .Apply(TestProjectSettings, v)),
-                        completeOnFailure: true);
+                        completeOnFailure: true,
+                        degreeOfParallelism: TestDegreeOfParallelism);
                 }
                 finally
                 {
@@ -90,7 +93,7 @@ namespace Nuke.Components
                 .SetCoverletOutputFormat(CoverletOutputFormat.cobertura)
                 .SetExcludeByFile("*.Generated.cs")
                 .When(TeamCity.Instance is not null, _ => _
-                    .SetCoverletOutputFormat((CoverletOutputFormat) $"\\\"{CoverletOutputFormat.cobertura},{CoverletOutputFormat.teamcity}\\\""))
+                    .SetCoverletOutputFormat($"\\\"{CoverletOutputFormat.cobertura},{CoverletOutputFormat.teamcity}\\\""))
                 .When(IsServerBuild, _ => _
                     .EnableUseSourceLink()));
 

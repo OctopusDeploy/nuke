@@ -20,10 +20,10 @@ namespace Nuke.Common.CI.GitHubActions.Configuration
 
         public override void Write(CustomFileWriter writer)
         {
-            writer.WriteLine($"- name: Cache {IncludePatterns.JoinCommaSpace()}");
+            writer.WriteLine("- name: " + $"Cache: {IncludePatterns.JoinCommaSpace()}".SingleQuote());
             using (writer.Indent())
             {
-                writer.WriteLine("uses: actions/cache@v2");
+                writer.WriteLine("uses: actions/cache@v3");
                 writer.WriteLine("with:");
                 using (writer.Indent())
                 {

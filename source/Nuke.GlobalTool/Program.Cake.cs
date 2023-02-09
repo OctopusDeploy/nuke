@@ -13,12 +13,12 @@ using Nuke.Common;
 using Nuke.Common.Execution;
 using Nuke.Common.IO;
 using Nuke.Common.ProjectModel;
+using Nuke.Common.Tooling;
 using Nuke.Common.Utilities;
 using Nuke.Common.Utilities.Collections;
 using Nuke.GlobalTool.Rewriting.Cake;
 using static Nuke.Common.Constants;
 using static Nuke.Common.EnvironmentInfo;
-using static Nuke.Common.Tooling.NuGetPackageResolver;
 
 namespace Nuke.GlobalTool
 {
@@ -29,6 +29,8 @@ namespace Nuke.GlobalTool
         [UsedImplicitly]
         public static int CakeConvert(string[] args, [CanBeNull] AbsolutePath rootDirectory, [CanBeNull] AbsolutePath buildScript)
         {
+            PrintInfo();
+            Logging.Configure();
             Telemetry.ConvertCake();
             ProjectModelTasks.Initialize();
 
@@ -47,33 +49,34 @@ namespace Nuke.GlobalTool
                 }.JoinNewLine());
 
             Host.Debug();
-            if (!UserConfirms("Continue?"))
+            if (!PromptForConfirmation("Continue?"))
                 return 0;
             Host.Debug();
 
             if (buildScript == null &&
-                UserConfirms("Should a NUKE project be created for better results?"))
+                PromptForConfirmation("Should a NUKE project be created for better results?"))
             {
                 Setup(args, rootDirectory: null, buildScript: null);
             }
 
-            var buildProjectFile = File.Exists(WorkingDirectory / CurrentBuildScriptName)
-                ? GetConfiguration(WorkingDirectory / CurrentBuildScriptName, evaluate: true)
+            var buildScriptFile = WorkingDirectory / CurrentBuildScriptName;
+            var buildProjectFile = buildScriptFile.Exists()
+                ? GetConfiguration(buildScriptFile, evaluate: true)
                     .GetValueOrDefault(BUILD_PROJECT_FILE, defaultValue: null)
                 : null;
 
-            string GetOutputDirectory(string file)
-                => Path.GetDirectoryName(buildProjectFile ?? file);
-
-            string GetOutputFile(string file)
-                => (AbsolutePath) GetOutputDirectory(file) / Path.GetFileNameWithoutExtension(file).Capitalize() + ".cs";
-
-            GetCakeFiles().ForEach(x => File.WriteAllText(path: GetOutputFile(x), contents: GetCakeConvertedContent(File.ReadAllText(x))));
+            foreach (var cakeFile in GetCakeFiles())
+            {
+                var outputFile = cakeFile.Parent / cakeFile.NameWithoutExtension.Capitalize() + ".cs";
+                var content = GetCakeConvertedContent(cakeFile.ReadAllText());
+                outputFile.WriteAllText(content);
+            }
 
             if (buildProjectFile != null)
             {
-                GetCakeFiles().SelectMany(x => GetCakePackages(File.ReadAllText(x)))
-                    .ForEach(x => AddOrReplacePackage(x.PackageId, x.PackageVersion, x.PackageType, buildProjectFile));
+                var packages = GetCakeFiles().SelectMany(x => GetCakePackages(x.ReadAllText()));
+                foreach (var package in packages)
+                    AddOrReplacePackage(package.Id, package.Version, package.Type, buildProjectFile);
             }
 
             return 0;
@@ -86,8 +89,8 @@ namespace Nuke.GlobalTool
             Host.Information("Found .cake files:");
             cakeFiles.ForEach(x => Host.Debug($"  - {x}"));
 
-            if (UserConfirms("Delete?"))
-                cakeFiles.ForEach(FileSystemTasks.DeleteFile);
+            if (PromptForConfirmation("Delete?"))
+                cakeFiles.ForEach(x => x.DeleteFile());
 
             return 0;
         }
@@ -119,9 +122,9 @@ namespace Nuke.GlobalTool
                 .ToFullString();
         }
 
-        internal static IEnumerable<(string PackageType, string PackageId, string PackageVersion)> GetCakePackages(string content)
+        internal static IEnumerable<(string Type, string Id, string Version)> GetCakePackages(string content)
         {
-            IEnumerable<(string PackageType, string PackageId, string PackageVersion)> GetPackages(
+            IEnumerable<(string Type, string Id, string Version)> GetPackages(
                 string packageType,
                 [RegexPattern] string regexPattern)
             {
@@ -131,14 +134,14 @@ namespace Nuke.GlobalTool
                     var packageId = match.Groups["packageId"].Value;
                     var packageVersion = match.Groups["version"].Value;
                     if (packageVersion.IsNullOrEmpty())
-                        packageVersion = GetLatestPackageVersion(packageId, includePrereleases: false).GetAwaiter().GetResult();
+                        packageVersion = NuGetVersionResolver.GetLatestVersion(packageId, includePrereleases: false).GetAwaiter().GetResult();
                     yield return new(packageType, packageId, packageVersion);
                 }
             }
 
             return GetPackages(PACKAGE_TYPE_DOWNLOAD, @"#tool ""nuget:\?package=(?'packageId'[\w\d\.]+)(&version=(?'version'[\w\d\.]+))?S*""")
                 .Concat(GetPackages(PACKAGE_TYPE_REFERENCE, @"#addin ""nuget:\?package=(?'packageId'[\w\d\.]+)(&version=(?'version'[\w\d\.]+))?S*"""))
-                .Where(x => !x.PackageId.ContainsOrdinalIgnoreCase("Cake"));
+                .Where(x => !x.Id.ContainsOrdinalIgnoreCase("Cake"));
         }
     }
 }

@@ -9,6 +9,7 @@ using System.Linq;
 using JetBrains.Annotations;
 using Nuke.Common.CI.SpaceAutomation.Configuration;
 using Nuke.Common.Execution;
+using Nuke.Common.IO;
 using Nuke.Common.Utilities;
 
 namespace Nuke.Common.CI.SpaceAutomation
@@ -20,6 +21,7 @@ namespace Nuke.Common.CI.SpaceAutomation
         private readonly string _name;
         private readonly string _image;
 
+        private bool _submodules;
         private bool? _onPush;
         private int? _timeoutInMinutes;
 
@@ -30,8 +32,8 @@ namespace Nuke.Common.CI.SpaceAutomation
         }
 
         public override Type HostType => typeof(SpaceAutomation);
-        public override string ConfigurationFile => NukeBuild.RootDirectory / ".space.kts";
-        public override IEnumerable<string> GeneratedFiles => new[] { ConfigurationFile };
+        public override AbsolutePath ConfigurationFile => Build.RootDirectory / ".space.kts";
+        public override IEnumerable<AbsolutePath> GeneratedFiles => new[] { ConfigurationFile };
 
         public override IEnumerable<string> RelevantTargetNames => InvokedTargets;
         public override IEnumerable<string> IrrelevantTargetNames => new string[0];
@@ -40,6 +42,12 @@ namespace Nuke.Common.CI.SpaceAutomation
         public string ResourcesCpu { get; set; }
         public string ResourcesMemory { get; set; }
         public string[] RefSpec { get; set; } = { "refs/heads/*:refs/heads/*" };
+
+        public bool Submodules
+        {
+            set => _submodules = value;
+            get => throw new NotSupportedException();
+        }
 
         public string[] InvokedTargets { get; set; } = new string[0];
 
@@ -70,7 +78,7 @@ namespace Nuke.Common.CI.SpaceAutomation
             return new CustomFileWriter(streamWriter, indentationFactor: 4, commentPrefix: "//");
         }
 
-        public override ConfigurationEntity GetConfiguration(NukeBuild build, IReadOnlyCollection<ExecutableTarget> relevantTargets)
+        public override ConfigurationEntity GetConfiguration(IReadOnlyCollection<ExecutableTarget> relevantTargets)
         {
             return new SpaceAutomationConfiguration
                    {
@@ -90,6 +98,7 @@ namespace Nuke.Common.CI.SpaceAutomation
                        Image = _image,
                        Resources = GetResources(),
                        Imports = GetImports().ToDictionary(x => x.Key, x => x.Value),
+                       Submodules = _submodules,
                        BuildScript = BuildCmdPath.Replace(".cmd", ".sh"),
                        InvokedTargets = InvokedTargets
                    };

@@ -3,7 +3,6 @@
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Nuke.Common;
-using Nuke.Common.Execution;
 using Nuke.Common.Tooling;
 using Nuke.Common.Tools;
 using Nuke.Common.Utilities.Collections;
@@ -37,9 +36,9 @@ namespace Nuke.Common.Tools.Chocolatey
         ///   <p>Chocolatey has the largest online registry of Windows packages. Chocolatey packages encapsulate everything required to manage a particular piece of software into one deployment artifact by wrapping installers, executables, zips, and/or scripts into a compiled package file.</p>
         ///   <p>For more details, visit the <a href="https://chocolatey.org/">official website</a>.</p>
         /// </summary>
-        public static IReadOnlyCollection<Output> Chocolatey(string arguments, string workingDirectory = null, IReadOnlyDictionary<string, string> environmentVariables = null, int? timeout = null, bool? logOutput = null, bool? logInvocation = null, Func<string, string> outputFilter = null)
+        public static IReadOnlyCollection<Output> Chocolatey(ref ArgumentStringHandler arguments, string workingDirectory = null, IReadOnlyDictionary<string, string> environmentVariables = null, int? timeout = null, bool? logOutput = null, bool? logInvocation = null, Action<OutputType, string> customLogger = null)
         {
-            using var process = ProcessTasks.StartProcess(ChocolateyPath, arguments, workingDirectory, environmentVariables, timeout, logOutput, logInvocation, ChocolateyLogger, outputFilter);
+            using var process = ProcessTasks.StartProcess(ChocolateyPath, ref arguments, workingDirectory, environmentVariables, timeout, logOutput, logInvocation, customLogger ?? ChocolateyLogger);
             process.AssertZeroExitCode();
             return process.Output;
         }
@@ -1107,7 +1106,7 @@ namespace Nuke.Common.Tools.Chocolatey
         ///   Path to the Chocolatey executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? ChocolateyTasks.ChocolateyPath;
-        public override Action<OutputType, string> ProcessCustomLogger => ChocolateyTasks.ChocolateyLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? ChocolateyTasks.ChocolateyLogger;
         /// <summary>
         ///   Search filter.
         /// </summary>
@@ -1355,7 +1354,7 @@ namespace Nuke.Common.Tools.Chocolatey
         ///   Path to the Chocolatey executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? ChocolateyTasks.ChocolateyPath;
-        public override Action<OutputType, string> ProcessCustomLogger => ChocolateyTasks.ChocolateyLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? ChocolateyTasks.ChocolateyLogger;
         /// <summary>
         ///   Search filter.
         /// </summary>
@@ -1603,7 +1602,7 @@ namespace Nuke.Common.Tools.Chocolatey
         ///   Path to the Chocolatey executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? ChocolateyTasks.ChocolateyPath;
-        public override Action<OutputType, string> ProcessCustomLogger => ChocolateyTasks.ChocolateyLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? ChocolateyTasks.ChocolateyLogger;
         /// <summary>
         ///   Search filter.
         /// </summary>
@@ -1851,7 +1850,7 @@ namespace Nuke.Common.Tools.Chocolatey
         ///   Path to the Chocolatey executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? ChocolateyTasks.ChocolateyPath;
-        public override Action<OutputType, string> ProcessCustomLogger => ChocolateyTasks.ChocolateyLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? ChocolateyTasks.ChocolateyLogger;
         /// <summary>
         ///   The source to find the package(s) to install. Special sources include: ruby, webpi, cygwin, windowsfeatures, and python. To specify more than one source, pass it with a semi-colon separating the values (-e.g. "'source1;source2'"). Defaults to default feeds.
         /// </summary>
@@ -2019,7 +2018,7 @@ namespace Nuke.Common.Tools.Chocolatey
         ///   Path to the Chocolatey executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? ChocolateyTasks.ChocolateyPath;
-        public override Action<OutputType, string> ProcessCustomLogger => ChocolateyTasks.ChocolateyLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? ChocolateyTasks.ChocolateyLogger;
         /// <summary>
         ///   Path to nuspec
         /// </summary>
@@ -2163,7 +2162,7 @@ namespace Nuke.Common.Tools.Chocolatey
         ///   Path to the Chocolatey executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? ChocolateyTasks.ChocolateyPath;
-        public override Action<OutputType, string> ProcessCustomLogger => ChocolateyTasks.ChocolateyLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? ChocolateyTasks.ChocolateyLogger;
         /// <summary>
         ///   Path to Nuget package (.nupkg).
         /// </summary>
@@ -2306,7 +2305,7 @@ namespace Nuke.Common.Tools.Chocolatey
         ///   Path to the Chocolatey executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? ChocolateyTasks.ChocolateyPath;
-        public override Action<OutputType, string> ProcessCustomLogger => ChocolateyTasks.ChocolateyLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? ChocolateyTasks.ChocolateyLogger;
         /// <summary>
         ///   Generate automatic package instead of normal. Defaults to false.
         /// </summary>

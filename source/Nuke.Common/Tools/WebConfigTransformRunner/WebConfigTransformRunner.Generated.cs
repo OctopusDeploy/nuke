@@ -3,7 +3,6 @@
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Nuke.Common;
-using Nuke.Common.Execution;
 using Nuke.Common.Tooling;
 using Nuke.Common.Tools;
 using Nuke.Common.Utilities.Collections;
@@ -31,15 +30,15 @@ namespace Nuke.Common.Tools.WebConfigTransformRunner
         /// </summary>
         public static string WebConfigTransformRunnerPath =>
             ToolPathResolver.TryGetEnvironmentExecutable("WEBCONFIGTRANSFORMRUNNER_EXE") ??
-            ToolPathResolver.GetPackageExecutable("WebConfigTransformRunner", "WebConfigTransformRunner.exe");
+            NuGetToolPathResolver.GetPackageExecutable("WebConfigTransformRunner", "WebConfigTransformRunner.exe");
         public static Action<OutputType, string> WebConfigTransformRunnerLogger { get; set; } = ProcessTasks.DefaultLogger;
         /// <summary>
         ///   <p>This is a commandline tool to run an ASP.Net web.config tranformation.</p>
         ///   <p>For more details, visit the <a href="https://github.com/erichexter/WebConfigTransformRunner">official website</a>.</p>
         /// </summary>
-        public static IReadOnlyCollection<Output> WebConfigTransformRunner(string arguments, string workingDirectory = null, IReadOnlyDictionary<string, string> environmentVariables = null, int? timeout = null, bool? logOutput = null, bool? logInvocation = null, Func<string, string> outputFilter = null)
+        public static IReadOnlyCollection<Output> WebConfigTransformRunner(ref ArgumentStringHandler arguments, string workingDirectory = null, IReadOnlyDictionary<string, string> environmentVariables = null, int? timeout = null, bool? logOutput = null, bool? logInvocation = null, Action<OutputType, string> customLogger = null)
         {
-            using var process = ProcessTasks.StartProcess(WebConfigTransformRunnerPath, arguments, workingDirectory, environmentVariables, timeout, logOutput, logInvocation, WebConfigTransformRunnerLogger, outputFilter);
+            using var process = ProcessTasks.StartProcess(WebConfigTransformRunnerPath, ref arguments, workingDirectory, environmentVariables, timeout, logOutput, logInvocation, customLogger ?? WebConfigTransformRunnerLogger);
             process.AssertZeroExitCode();
             return process.Output;
         }
@@ -108,7 +107,7 @@ namespace Nuke.Common.Tools.WebConfigTransformRunner
         ///   Path to the WebConfigTransformRunner executable.
         /// </summary>
         public override string ProcessToolPath => base.ProcessToolPath ?? WebConfigTransformRunnerTasks.WebConfigTransformRunnerPath;
-        public override Action<OutputType, string> ProcessCustomLogger => WebConfigTransformRunnerTasks.WebConfigTransformRunnerLogger;
+        public override Action<OutputType, string> ProcessCustomLogger => base.ProcessCustomLogger ?? WebConfigTransformRunnerTasks.WebConfigTransformRunnerLogger;
         /// <summary>
         ///   The base web.config file
         /// </summary>

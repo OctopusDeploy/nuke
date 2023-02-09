@@ -5,8 +5,83 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [vNext]
-- Added GitHub Actions support for submodules and fetch-depth
-- Added AppVeyor support for submodules
+
+## [6.3.0] / 2022-12-12
+- Added new version of `Octokit`
+- Added `OptionalAttribute` to suppress auto-injection warnings
+- Added ability to override `ProcessCustomLogger` in `ToolSettings`
+- Added ability to exclude auto-linked files in build project
+- Added `DiscordTasks`
+- Added `MastodonTasks`
+- Added `JavaScriptProject` project type
+- Added `MakeNSISTasks`
+- Fixed wording for static and dynamic conditions in build summary
+- Fixed waiting for confirmation when input is redirected
+- Fixed recursion into symlink directories
+- Fixed `ProcessException` to output standard output
+- Fixed `MinimalOutput` in `UnityTasks`
+- Fixed missing `AzurePipelinesBuildReason`
+- Fixed missing arguments in `DotNetTasks`
+- Fixed argument formatting in `HelmTasks`
+- Fixed missing command in `DotNetTasks`
+
+## [6.2.1] / 2022-08-19
+- Fixed logging configuration
+
+## [6.2.0] / 2022-08-19
+- Added support for intercepted targets
+- Added target interception for Docker
+- Added support for context components
+- Added `DisableDefaultOutputAttribute`
+- Added `InstallNpmToolsAttribute` and `NpmExecutableAttribute`
+- Added `EnvironmentInfo.IsArm64`
+- Added `SetProcessExecutionTimeout` overload for `TimeSpan`
+- Added `DotNetRuntimeIdentifiers`
+- Fixed telemetry
+- Fixed `GetPathExecutable` to manually search `PATH` environment variable if locator executable is not available
+- Fixed resolution of surrogate arguments in Visual Studio
+- Fixed performance of `NuGetPackageResolver`
+- Fixed `GitTasks.GitIsDetached`
+- Fixed missing members in `GitHubActionsImage`
+- Fixed missing members in `AzurePipelinesRepositoryType`
+- Fixed detection for Bamboo
+- Fixed missing arguments in `KubernetesTasks`
+- Fixed missing arguments in `DockerTasks`
+
+## [6.1.2] / 2022-07-02
+- Removed `Newtonsoft.Json.Schema` dependency
+- Fixed `Nuke.GlobalTool` to target `net6.0`
+- Fixed telemetry to calculate properties only on demand
+- Fixed missing `Framework` in `MinVerTasks` and `MinVerAttribute`
+- Fixed missing arguments in `DotNetTasks`
+
+## [6.1.1] / 2022-06-21
+- Fixed output encoding in `Nuke.GlobalTool` to be UTF-8
+- Fixed telemetry to handle Git repositories without remote
+- Fixed `GitRepository.HttpsUrl` and `SshUrl` when `Endpoint` is null
+- Fixed `ShutdownDotNetServerBuildAttribute` to timeout after 15 seconds
+
+## [6.1.0] / 2022-06-14
+- Removed extended setup wizard
+- Changed `Nuke.GlobalTool` to use `Spectre.Console`
+- Deprecated `CheckBuildProjectConfigurationsAttribute`
+- Added single-file packaging and execution
+- Added output customization via `NukeBuild.WriteLogo`, `WriteTarget`, and `WriteSummary`
+- Added second-chance registration for MSBuild from .NET CLI
+- Added submodule support in GitHub Actions, Space Automation, and AppVeyor
+- Added `NukeBuild.BuildAssemblyFile` property
+- Added generic `EnvironmentInfo.SetVariable`
+- Added support for Bitbucket
+- Added GitHub Actions support for `fetch-depth`
+- Fixed `default_target` replacement in help text
+- Fixed parameter padding and line breaks in help text
+- Fixed `Assert` methods to accept `IReadOnlyCollection`
+- Fixed fatal failure of `MSBuildLocator`
+- Fixed missing MSBuild registration when using `ProjectExtensions`
+- Fixed `NuGetPackageResolver` performance by reading metadata from `.nuspec` files
+- Fixed `GitRepository` initialization when remote is not set
+- Fixed exception for duplicated keys in TeamCity property files
+- Fixed missing arguments for `DotNetTasks`
 
 ## [6.0.3] / 2022-05-02
 - Fixed exception handling in various places
@@ -915,7 +990,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added CLT tasks for Git
 - Fixed background color in console output
 
-[vNext]: https://github.com/nuke-build/nuke/compare/6.0.3...HEAD
+[vNext]: https://github.com/nuke-build/nuke/compare/6.3.0...HEAD
+[6.3.0]: https://github.com/nuke-build/nuke/compare/6.2.1...6.3.0
+[6.2.1]: https://github.com/nuke-build/nuke/compare/6.2.0...6.2.1
+[6.2.0]: https://github.com/nuke-build/nuke/compare/6.1.2...6.2.0
+[6.1.2]: https://github.com/nuke-build/nuke/compare/6.1.1...6.1.2
+[6.1.1]: https://github.com/nuke-build/nuke/compare/6.1.0...6.1.1
+[6.1.0]: https://github.com/nuke-build/nuke/compare/6.0.3...6.1.0
 [6.0.3]: https://github.com/nuke-build/nuke/compare/6.0.2...6.0.3
 [6.0.2]: https://github.com/nuke-build/nuke/compare/6.0.1...6.0.2
 [6.0.1]: https://github.com/nuke-build/nuke/compare/6.0.0...6.0.1

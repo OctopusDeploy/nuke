@@ -27,35 +27,43 @@ namespace Nuke.Common.CI.TeamCity
     {
         public new static TeamCity Instance => Host.Instance as TeamCity;
 
-        internal static bool IsRunningTeamCity => !Environment.GetEnvironmentVariable("TEAMCITY_VERSION").IsNullOrEmpty();
+        internal static bool IsRunningTeamCity => EnvironmentInfo.HasVariable("TEAMCITY_VERSION");
 
         [CanBeNull]
-        private static IReadOnlyDictionary<string, string> ParseDictionary([CanBeNull] string file)
+        private static IReadOnlyDictionary<string, string> ParseDictionary([CanBeNull] AbsolutePath file)
         {
             if (file == null)
                 return null;
 
-            var lines = File.ReadAllLines(file);
+            var lines = file.ReadAllLines();
             var dictionary = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-            for (var i = 0; i < lines.Length; i++)
+            try
             {
-                var line = lines[i]
-                    .Replace("\\:", ":")
-                    .Replace("\\=", "=")
-                    .Replace("\\\\", "\\");
-                if (string.IsNullOrWhiteSpace(line) || line[index: 0] == '#')
-                    continue;
+                for (var i = 0; i < lines.Length; i++)
+                {
+                    var line = lines[i]
+                        .Replace("\\:", ":")
+                        .Replace("\\=", "=")
+                        .Replace("\\\\", "\\");
+                    if (string.IsNullOrWhiteSpace(line) || line[index: 0] == '#')
+                        continue;
 
-                var index = line.IndexOfRegex(@"[^\.]=") + 1;
-                var key = line.Substring(startIndex: 0, length: index)
-                    .Replace("secure:", string.Empty);
-                var value = line.Substring(index + 1);
+                    var index = line.IndexOfRegex(@"[^\.]=") + 1;
+                    var key = line.Substring(startIndex: 0, length: index)
+                        .Replace("secure:", string.Empty);
+                    var value = line.Substring(index + 1);
 
-                dictionary.Add(key, value);
+                    dictionary.Add(key, value);
+                }
+
+                return dictionary;
             }
-
-            return dictionary;
+            catch (Exception exception)
+            {
+                Log.Warning(exception, "Could not parse dictionary from {File}", file);
+                return null;
+            }
         }
 
         private readonly Action<string> _messageSink;
@@ -74,14 +82,14 @@ namespace Nuke.Common.CI.TeamCity
         {
             _messageSink = messageSink ?? Console.WriteLine;
 
-            _systemProperties = Lazy.Create(() => ParseDictionary(EnvironmentInfo.GetVariable<string>("TEAMCITY_BUILD_PROPERTIES_FILE")));
+            _systemProperties = Lazy.Create(() => ParseDictionary(EnvironmentInfo.GetVariable("TEAMCITY_BUILD_PROPERTIES_FILE")));
             _configurationProperties = Lazy.Create(() => ParseDictionary(SystemProperties?["teamcity.configuration.properties.file"]));
             _runnerProperties = Lazy.Create(() => ParseDictionary(SystemProperties?["teamcity.runner.properties.file"]));
             _recentlyFailedTests = Lazy.Create(() =>
             {
-                var file = SystemProperties?["teamcity.tests.recentlyFailedTests.file"];
-                return File.Exists(file)
-                    ? TextTasks.ReadAllLines(file).ToImmutableList() as IReadOnlyCollection<string>
+                var file = (AbsolutePath) SystemProperties?["teamcity.tests.recentlyFailedTests.file"];
+                return file.FileExists()
+                    ? file.ReadAllLines().ToImmutableList() as IReadOnlyCollection<string>
                     : new string[0];
             });
         }
@@ -96,7 +104,7 @@ namespace Nuke.Common.CI.TeamCity
 
         public string BuildConfiguration => SystemProperties?["teamcity.buildConfName"];
         public string BuildTypeId => SystemProperties?["teamcity.buildType.id"];
-        [NoConvert] public string BuildNumber => EnvironmentInfo.GetVariable<string>("BUILD_NUMBER");
+        [NoConvert] public string BuildNumber => EnvironmentInfo.GetVariable("BUILD_NUMBER");
         public string BuildVcsNumber => SystemProperties?["build.vcs.number"];
         public string Version => SystemProperties?["teamcity.version"];
         public string ProjectName => SystemProperties?["teamcity.projectName"];

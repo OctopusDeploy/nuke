@@ -25,7 +25,6 @@ using static Nuke.Common.Tools.DotNet.DotNetTasks;
 using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.Tools.ReSharper.ReSharperTasks;
 
-[CheckBuildProjectConfigurations]
 [DotNetVerbosityMapping]
 [ShutdownDotNetAfterServerBuild]
 partial class Build
@@ -78,16 +77,16 @@ partial class Build
         .Before<IRestore>()
         .Executes(() =>
         {
-            SourceDirectory.GlobDirectories("*/bin", "*/obj").ForEach(DeleteDirectory);
-            EnsureCleanDirectory(OutputDirectory);
+            SourceDirectory.GlobDirectories("*/bin", "*/obj").DeleteDirectories();
+            OutputDirectory.CreateOrCleanDirectory();
         });
 
     Configure<DotNetBuildSettings> ICompile.CompileSettings => _ => _
-        .When(!ScheduledTargets.Contains(((IPublish)this).Publish), _ => _
+        .When(!ScheduledTargets.Contains(((IPublish)this).Publish) && !ScheduledTargets.Contains(Install), _ => _
             .ClearProperties());
 
     Configure<DotNetPublishSettings> ICompile.PublishSettings => _ => _
-        .When(!ScheduledTargets.Contains(((IPublish)this).Publish), _ => _
+        .When(!ScheduledTargets.Contains(((IPublish)this).Publish) && !ScheduledTargets.Contains(Install), _ => _
             .ClearProperties());
 
     IEnumerable<(Project Project, string Framework)> ICompile.PublishConfigurations =>
@@ -96,6 +95,9 @@ partial class Build
         select (project, framework);
 
     IEnumerable<Project> ITest.TestProjects => Partition.GetCurrent(Solution.GetProjects("*.Tests"));
+
+    [Parameter]
+    public int TestDegreeOfParallelism { get; } = 1;
 
     Configure<DotNetTestSettings> ITest.TestSettings => _ => _
         .SetProcessEnvironmentVariable("NUKE_TELEMETRY_OPTOUT", bool.TrueString);

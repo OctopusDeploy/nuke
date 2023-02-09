@@ -51,7 +51,7 @@ namespace Nuke.GlobalTool
 
             if (EnvironmentInfo.IsOsx && existingSecrets.Count == 0 && !fromCredentialStore)
             {
-                if (generatedPassword || UserConfirms($"Save password to keychain? (associated with '{rootDirectory}')"))
+                if (generatedPassword || PromptForConfirmation($"Save password to keychain? (associated with '{rootDirectory}')"))
                     SavePasswordToCredentialStore(credentialStoreName, password);
             }
 
@@ -62,14 +62,13 @@ namespace Nuke.GlobalTool
             var addedSecrets = new Dictionary<string, string>();
             while (true)
             {
-                var choice = ConsoleUtility.PromptForChoice(
+                var choice = PromptForChoice(
                     "Choose secret parameter to enter value:",
                     options.Select(x => (x, addedSecrets.ContainsKey(x) || existingSecrets.ContainsKey(x) ? $"* {x}" : x)).ToArray());
 
                 if (!choice.EqualsAnyOrdinalIgnoreCase(SaveAndExit, DiscardAndExit, DeletePasswordAndExit))
                 {
-                    Host.Information($"Enter secret for {choice}:");
-                    addedSecrets[choice] = ConsoleUtility.ReadSecret();
+                    addedSecrets[choice] = PromptForSecret(choice);
                 }
                 else
                 {
@@ -79,32 +78,35 @@ namespace Nuke.GlobalTool
                     if (choice == DeletePasswordAndExit)
                         DeletePasswordFromCredentialStore(credentialStoreName);
 
+                    if (addedSecrets.Any())
+                        Host.Information("Remember to clear your clipboard!");
+
                     return 0;
                 }
             }
         }
 
-        private static Dictionary<string, string> LoadSecrets(IReadOnlyCollection<string> secretParameters, string password, string parametersFile)
+        private static Dictionary<string, string> LoadSecrets(IReadOnlyCollection<string> secretParameters, string password, AbsolutePath parametersFile)
         {
-            var jobject = SerializationTasks.JsonDeserializeFromFile<JObject>(parametersFile);
+            var jobject = parametersFile.ReadJson();
             return jobject.Properties()
                 .Where(x => secretParameters.Contains(x.Name))
                 .ToDictionary(x => x.Name, x => Decrypt(x.Value.Value<string>(), password, x.Name));
         }
 
-        private static void SaveSecrets(Dictionary<string, string> secrets, string password, string parametersFile)
+        private static void SaveSecrets(Dictionary<string, string> secrets, string password, AbsolutePath parametersFile)
         {
-            var jobject = SerializationTasks.JsonDeserializeFromFile<JObject>(parametersFile);
-            foreach (var (name, secret) in secrets)
-                jobject[name] = Encrypt(secret, password);
-
-            SerializationTasks.JsonSerializeToFile(jobject, parametersFile);
+            parametersFile.UpdateJson(obj =>
+            {
+                foreach (var (name, secret) in secrets)
+                    obj[name] = Encrypt(secret, password);
+            });
         }
 
         private static IEnumerable<string> GetSecretParameters(AbsolutePath rootDirectory)
         {
             var buildSchemaFile = GetBuildSchemaFile(rootDirectory);
-            var jobject = SerializationTasks.JsonDeserializeFromFile<JObject>(buildSchemaFile);
+            var jobject = buildSchemaFile.ReadJson();
             return jobject
                 .GetPropertyValue("definitions")
                 .GetPropertyValue("build")

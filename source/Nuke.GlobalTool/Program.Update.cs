@@ -2,12 +2,14 @@
 // Distributed under the MIT License.
 // https://github.com/nuke-build/nuke/blob/master/LICENSE
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using JetBrains.Annotations;
 using Newtonsoft.Json.Linq;
 using Nuke.Common;
+using Nuke.Common.Execution;
 using Nuke.Common.IO;
 using Nuke.Common.ProjectModel;
 using Nuke.Common.Tools.DotNet;
@@ -21,22 +23,21 @@ namespace Nuke.GlobalTool
         [UsedImplicitly]
         public static int Update(string[] args, [CanBeNull] AbsolutePath rootDirectory, [CanBeNull] AbsolutePath buildScript)
         {
+            PrintInfo();
+            Logging.Configure();
+
             Assert.NotNull(rootDirectory);
 
             if (buildScript != null)
             {
-                if (UserConfirms("Update build scripts?"))
-                    UpdateBuildScripts(rootDirectory, buildScript);
-
-                if (UserConfirms("Update build project?"))
-                    UpdateBuildProject(buildScript);
+                ConfirmExecution("Update build scripts", () => UpdateBuildScripts(rootDirectory, buildScript));
+                ConfirmExecution("Update build project", () => UpdateBuildProject(buildScript));
             }
 
-            if (UserConfirms("Update configuration file?"))
-                UpdateConfigurationFile(rootDirectory);
+            ConfirmExecution("Update configuration file", () => UpdateConfigurationFile(rootDirectory));
+            ConfirmExecution("Update global.json", () => UpdateGlobalJsonFile(rootDirectory));
 
-            if (UserConfirms("Update global.json?"))
-                UpdateGlobalJsonFile(rootDirectory);
+            ShowCompletion("Updates");
 
             return 0;
         }
@@ -45,15 +46,12 @@ namespace Nuke.GlobalTool
         {
             var configuration = GetConfiguration(buildScript, evaluate: true);
             var buildProjectFile = (AbsolutePath) configuration[BUILD_PROJECT_FILE];
-            var solutionDirectory = (AbsolutePath) configuration.GetValueOrDefault(SOLUTION_DIRECTORY);
 
             WriteBuildScripts(
                 scriptDirectory: buildScript.Parent,
                 rootDirectory,
-                solutionDirectory,
                 buildDirectory: buildProjectFile.NotNull().Parent,
-                buildProjectName: Path.GetFileNameWithoutExtension(buildProjectFile),
-                solutionDirectory == null ? PLATFORM_NETCORE : PLATFORM_NETFX);
+                buildProjectName: Path.GetFileNameWithoutExtension(buildProjectFile));
         }
 
         private static void UpdateBuildProject(AbsolutePath buildScript)
@@ -67,11 +65,11 @@ namespace Nuke.GlobalTool
         private static void UpdateConfigurationFile(AbsolutePath rootDirectory)
         {
             var configurationFile = rootDirectory / NukeDirectoryName;
-            if (!File.Exists(configurationFile))
+            if (!configurationFile.Exists())
                 return;
 
-            var solutionFile = rootDirectory / File.ReadLines(configurationFile).FirstOrDefault(x => !x.IsNullOrEmpty());
-            File.Delete(configurationFile);
+            var solutionFile = rootDirectory / configurationFile.ReadAllLines().FirstOrDefault(x => !x.IsNullOrEmpty());
+            configurationFile.DeleteFile();
 
             WriteConfigurationFile(rootDirectory, solutionFile);
             Host.Warning("The previous .nuke file was transformed to a .nuke directory.");
@@ -82,18 +80,16 @@ namespace Nuke.GlobalTool
 
         private static void UpdateGlobalJsonFile(AbsolutePath rootDirectory)
         {
-            var latestInstalledSdk = DotNetTasks.DotNet("--list-sdks", logInvocation: false, logOutput: false)
+            var latestInstalledSdk = DotNetTasks.DotNet($"--list-sdks", logInvocation: false, logOutput: false)
                 .LastOrDefault().Text?.Split(" ").First();
             if (latestInstalledSdk == null)
                 return;
 
             var globalJsonFile = rootDirectory / "global.json";
-            var jobject = File.Exists(globalJsonFile)
-                ? SerializationTasks.JsonDeserializeFromFile<JObject>(globalJsonFile)
-                : new JObject();
+            var jobject = globalJsonFile.Existing()?.ReadJson() ?? new JObject();
             jobject["sdk"] ??= new JObject();
             jobject["sdk"].NotNull()["version"] = latestInstalledSdk;
-            SerializationTasks.JsonSerializeToFile(jobject, globalJsonFile);
+            globalJsonFile.WriteJson(jobject);
         }
     }
 }
